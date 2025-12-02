@@ -7,6 +7,8 @@ import 'stops_view.dart';
 import 'lost_objects_view.dart';
 import 'suggestions_view.dart';
 import 'survey_view.dart';
+import 'login_screen.dart';
+import '../utils/app_strings.dart';
 
 class MapsView extends StatefulWidget {
   const MapsView({super.key});
@@ -23,6 +25,8 @@ class _MapsViewState extends State<MapsView> {
   MapType _currentMapType = MapType.normal;
   bool _isMapMenuExpanded = false;
   bool _isInfoExpanded = false;
+  int _selectedRouteTab = 0; // 0: Frecuentes, 1: En Tiempo, 2: Todas
+  Map<String, dynamic>? _currentSelectedRoute;
 
   static const CameraPosition _kGooglePlex = CameraPosition(
     target: LatLng(20.543508165491687, -103.47583907776028),
@@ -111,7 +115,7 @@ class _MapsViewState extends State<MapsView> {
                 children: [
                   _buildDrawerItem(
                     icon: Icons.person,
-                    title: 'Perfil',
+                    title: AppStrings.get('profile'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -124,7 +128,7 @@ class _MapsViewState extends State<MapsView> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.directions_bus,
-                    title: 'Paradas',
+                    title: AppStrings.get('stops'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -137,7 +141,7 @@ class _MapsViewState extends State<MapsView> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.support_agent,
-                    title: 'Asistencia',
+                    title: AppStrings.get('assistance'),
                     onTap: () {
                       Navigator.pop(context);
                     },
@@ -145,7 +149,7 @@ class _MapsViewState extends State<MapsView> {
 
                    _buildDrawerItem(
                     icon: Icons.error,
-                    title: 'Objetos Perdidos',
+                    title: AppStrings.get('lostObjects'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -159,7 +163,7 @@ class _MapsViewState extends State<MapsView> {
                   
                   _buildDrawerItem(
                     icon: Icons.comment,
-                    title: 'Sugerencias',
+                    title: AppStrings.get('suggestions'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -173,7 +177,7 @@ class _MapsViewState extends State<MapsView> {
 
                    _buildDrawerItem(
                     icon: Icons.info,
-                    title: 'Información',
+                    title: AppStrings.get('information'),
                     onTap: () {
                       setState(() {
                         _isInfoExpanded = !_isInfoExpanded;
@@ -189,7 +193,7 @@ class _MapsViewState extends State<MapsView> {
                   if (_isInfoExpanded) ...[
                     _buildDrawerSubItem(
                       icon: Icons.campaign,
-                      title: 'Comunicados',
+                      title: AppStrings.get('announcements'),
                       onTap: () {
                         Navigator.pop(context);
                         // Navegar a Comunicados
@@ -197,7 +201,7 @@ class _MapsViewState extends State<MapsView> {
                     ),
                     _buildDrawerSubItem(
                       icon: Icons.gavel,
-                      title: 'Reglamentación',
+                      title: AppStrings.get('regulations'),
                       onTap: () {
                         Navigator.pop(context);
                         // Navegar a Reglamentación
@@ -205,7 +209,7 @@ class _MapsViewState extends State<MapsView> {
                     ),
                     _buildDrawerSubItem(
                       icon: Icons.menu_book,
-                      title: 'Manual de Usuario',
+                      title: AppStrings.get('userManual'),
                       onTap: () {
                         Navigator.pop(context);
                         // Navegar a Manual
@@ -215,7 +219,7 @@ class _MapsViewState extends State<MapsView> {
                   
                   _buildDrawerItem(
                     icon: Icons.mood,
-                    title: 'Encuesta',
+                    title: AppStrings.get('survey'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -232,12 +236,17 @@ class _MapsViewState extends State<MapsView> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.logout,
-                    title: 'Cerrar sesión',
+                    title: AppStrings.get('logout'),
                     iconColor: Colors.red,
                     textColor: Colors.red,
                     onTap: () {
                       Navigator.pop(context);
-                      // Cerrar sesión
+                       Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -302,7 +311,7 @@ class _MapsViewState extends State<MapsView> {
                 if (_isMapMenuExpanded) ...[
                   _buildMapTypeOption(
                     icon: Icons.map,
-                    label: 'Normal',
+                    label: AppStrings.get('mapTypeNormal'),
                     isSelected: _currentMapType == MapType.normal,
                     onTap: () {
                       setState(() {
@@ -314,7 +323,7 @@ class _MapsViewState extends State<MapsView> {
                   const SizedBox(height: 12),
                   _buildMapTypeOption(
                     icon: Icons.satellite,
-                    label: 'Satélite',
+                    label: AppStrings.get('mapTypeSatellite'),
                     isSelected: _currentMapType == MapType.satellite,
                     onTap: () {
                       setState(() {
@@ -326,7 +335,7 @@ class _MapsViewState extends State<MapsView> {
                   const SizedBox(height: 12),
                   _buildMapTypeOption(
                     icon: Icons.terrain,
-                    label: 'Híbrido',
+                    label: AppStrings.get('mapTypeHybrid'),
                     isSelected: _currentMapType == MapType.hybrid,
                     onTap: () {
                       setState(() {
@@ -350,10 +359,155 @@ class _MapsViewState extends State<MapsView> {
             ),
           ),
           
-          // Botón "Seleccionar Ruta" en la parte inferior izquierda
+          
+          // Menú de Tipos de Mapa (FAB)
+          Positioned(
+            right: 16,
+            bottom: 100,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isMapMenuExpanded) ...[
+                  _buildMapTypeOption(
+                    icon: Icons.map_outlined,
+                    label: AppStrings.get('mapTypeNormal'),
+                    isSelected: _currentMapType == MapType.normal,
+                    onTap: () {
+                      setState(() {
+                        _currentMapType = MapType.normal;
+                        _isMapMenuExpanded = false;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMapTypeOption(
+                    icon: Icons.satellite_outlined,
+                    label: AppStrings.get('mapTypeSatellite'),
+                    isSelected: _currentMapType == MapType.satellite,
+                    onTap: () {
+                      setState(() {
+                        _currentMapType = MapType.satellite;
+                        _isMapMenuExpanded = false;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMapTypeOption(
+                    icon: Icons.terrain_outlined,
+                    label: AppStrings.get('mapTypeHybrid'),
+                    isSelected: _currentMapType == MapType.hybrid,
+                    onTap: () {
+                      setState(() {
+                        _currentMapType = MapType.hybrid;
+                        _isMapMenuExpanded = false;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _buildFloatingButton(
+                  icon: _isMapMenuExpanded ? Icons.close : Icons.layers,
+                  onTap: () {
+                    setState(() {
+                      _isMapMenuExpanded = !_isMapMenuExpanded;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Banner de Estado de Ruta (Izquierda)
           Positioned(
             left: 16,
-            bottom: 100,
+            right: 90, // Dejar espacio para el FAB
+            bottom: 100, // Alineado con el FAB
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: _currentSelectedRoute != null 
+                      ? (_currentSelectedRoute!['status'] == 'Retrasado' ? Colors.red.withOpacity(0.5) : Colors.green.withOpacity(0.5))
+                      : Colors.grey.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _currentSelectedRoute != null 
+                              ? _currentSelectedRoute!['name'] 
+                              : AppStrings.get('noRouteSelected'),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: _currentSelectedRoute != null 
+                                    ? (_currentSelectedRoute!['status'] == 'Retrasado' ? Colors.red : Colors.green)
+                                    : Colors.grey,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _currentSelectedRoute != null 
+                                    ? (_currentSelectedRoute!['status'] == 'Retrasado' ? AppStrings.get('outOfSchedule') : AppStrings.get('routeActive'))
+                                    : AppStrings.get('selectRouteMsg'),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_currentSelectedRoute != null)
+                    Icon(
+                      _currentSelectedRoute!['status'] == 'Retrasado' ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                      color: _currentSelectedRoute!['status'] == 'Retrasado' ? Colors.red : Colors.green,
+                      size: 20,
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // Botón "Seleccionar Ruta" (Izquierda, abajo)
+          Positioned(
+            left: 16,
+            right: 90, // Dejar espacio para el FAB (aunque esté más arriba, mantiene alineación visual)
+            bottom: 30, // Un poco más abajo
             child: Container(
               decoration: BoxDecoration(
                 boxShadow: [
@@ -366,19 +520,12 @@ class _MapsViewState extends State<MapsView> {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // Funcionalidad para seleccionar ruta (próximamente)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Funcionalidad próximamente'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  _showRouteSelectionSheet(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryOrange,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
                     vertical: 14,
                   ),
                   shape: RoundedRectangleBorder(
@@ -387,9 +534,9 @@ class _MapsViewState extends State<MapsView> {
                   elevation: 0,
                 ),
                 icon: const Icon(Icons.route, size: 20),
-                label: const Text(
-                  'Seleccionar Ruta',
-                  style: TextStyle(
+                label: Text(
+                  AppStrings.get('selectRoute'),
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
@@ -577,6 +724,449 @@ class _MapsViewState extends State<MapsView> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showRouteSelectionSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        // Variable local para manejar la navegación interna del sheet
+        Map<String, dynamic>? selectedRouteDetail;
+
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  // Header dinámico
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey[200]!,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            if (selectedRouteDetail != null)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_ios, size: 20),
+                                  onPressed: () {
+                                    setSheetState(() {
+                                      selectedRouteDetail = null;
+                                    });
+                                  },
+                                  color: primaryOrange,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ),
+                            Text(
+                              selectedRouteDetail != null 
+                                ? selectedRouteDetail!['name'] 
+                                : AppStrings.get('selectRoute'),
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                          color: Colors.grey[600],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Contenido dinámico
+                  if (selectedRouteDetail != null)
+                    Expanded(
+                      child: _buildRouteDetailView(selectedRouteDetail!),
+                    )
+                  else ...[
+                    // Navigation Tabs
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildTabItem(AppStrings.get('frequent'), 0, setSheetState),
+                          _buildTabItem(AppStrings.get('onTime'), 1, setSheetState),
+                          _buildTabItem(AppStrings.get('all'), 2, setSheetState),
+                        ],
+                      ),
+                    ),
+
+                    // Route List
+                    Expanded(
+                      child: _buildRouteList(_selectedRouteTab, (route) {
+                        // Callback cuando se selecciona una ruta
+                        if (_selectedRouteTab == 2) {
+                          // En la pestaña TODAS, navegar al detalle
+                          setSheetState(() {
+                            selectedRouteDetail = route;
+                          });
+                        } else {
+                          // En otras pestañas, comportamiento normal (seleccionar y cerrar)
+                          setState(() {
+                            _currentSelectedRoute = route;
+                          });
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${AppStrings.get('selected')} ${route['name']}')),
+                          );
+                        }
+                      }),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRouteDetailView(Map<String, dynamic> route) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          // Tarjeta de información general
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: primaryOrange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: primaryOrange.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: primaryOrange),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${AppStrings.get('availableSchedules')} ${route['name']}',
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Columna Entradas
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.login, size: 18, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text(
+                            AppStrings.get('entries'),
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...List<String>.from(route['entradas']).map((time) => Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        time,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              // Columna Salidas
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.logout, size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text(
+                            AppStrings.get('exits'),
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...List<String>.from(route['salidas']).map((time) => Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        time,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem(String title, int index, StateSetter setSheetState) {
+    final bool isSelected = _selectedRouteTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setSheetState(() {
+            _selectedRouteTab = index;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryOrange : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: primaryOrange.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey[600],
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRouteList(int tabIndex, Function(Map<String, dynamic>) onRouteTap) {
+    // Mock data for routes with schedules
+    final List<Map<String, dynamic>> allRoutes = [
+      {
+        'name': 'SOLEDAD',
+        'status': 'A tiempo',
+        'time': '5 min',
+        'entradas': ['06:00 AM', '07:30 AM', '09:00 AM', '10:30 AM', '12:00 PM'],
+        'salidas': ['06:45 AM', '08:15 AM', '09:45 AM', '11:15 AM', '12:45 PM']
+      },
+      {
+        'name': 'LA VIRGEN',
+        'status': 'Retrasado',
+        'time': '12 min',
+        'entradas': ['06:15 AM', '07:45 AM', '09:15 AM', '10:45 AM'],
+        'salidas': ['07:00 AM', '08:30 AM', '10:00 AM', '11:30 AM']
+      },
+      {
+        'name': 'SALK',
+        'status': 'A tiempo',
+        'time': '8 min',
+        'entradas': ['06:30 AM', '08:00 AM', '09:30 AM', '11:00 AM'],
+        'salidas': ['07:15 AM', '08:45 AM', '10:15 AM', '11:45 AM']
+      },
+      {
+        'name': 'OLINDA',
+        'status': 'A tiempo',
+        'time': '3 min',
+        'entradas': ['05:45 AM', '07:15 AM', '08:45 AM', '10:15 AM'],
+        'salidas': ['06:30 AM', '08:00 AM', '09:30 AM', '11:00 AM']
+      },
+      {
+        'name': 'SAUCITO',
+        'status': 'Llegando',
+        'time': '1 min',
+        'entradas': ['06:10 AM', '07:40 AM', '09:10 AM', '10:40 AM'],
+        'salidas': ['06:55 AM', '08:25 AM', '09:55 AM', '11:25 AM']
+      },
+    ];
+
+    List<Map<String, dynamic>> displayedRoutes;
+    if (tabIndex == 0) {
+      // Frecuentes (mock filter)
+      displayedRoutes = [allRoutes[0], allRoutes[3]];
+    } else if (tabIndex == 1) {
+      // En Tiempo (mock filter)
+      displayedRoutes = allRoutes.where((r) => r['status'] == 'A tiempo' || r['status'] == 'Llegando').toList();
+    } else {
+      // Todas
+      displayedRoutes = allRoutes;
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: displayedRoutes.length,
+      itemBuilder: (context, index) {
+        final route = displayedRoutes[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: primaryOrange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.directions_bus, color: primaryOrange),
+            ),
+            title: Text(
+              route['name'],
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: route['status'] == 'Retrasado' ? Colors.red : Colors.green,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  route['status'],
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+            trailing: tabIndex == 2 
+              ? const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey)
+              : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    route['time'],
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+            onTap: () => onRouteTap(route),
+          ),
+        );
+      },
     );
   }
 }

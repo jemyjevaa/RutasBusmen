@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_strings.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -19,7 +20,7 @@ class _ProfileViewState extends State<ProfileView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Perfil'),
+        title: Text(AppStrings.get('profile')),
         backgroundColor: primaryOrange,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -38,9 +39,9 @@ class _ProfileViewState extends State<ProfileView> {
               const SizedBox(height: 10),
               
               // Campos de información
-              const Text(
-                'Información Personal',
-                style: TextStyle(
+              Text(
+                AppStrings.get('personalInfo'),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -51,7 +52,7 @@ class _ProfileViewState extends State<ProfileView> {
               // Campo Usuario
               _buildInfoCard(
                 icon: Icons.person_outline,
-                label: 'Usuario',
+                label: AppStrings.get('userLabel'),
                 value: userName,
               ),
               const SizedBox(height: 16),
@@ -59,7 +60,7 @@ class _ProfileViewState extends State<ProfileView> {
               // Campo Email
               _buildInfoCard(
                 icon: Icons.email_outlined,
-                label: 'Email',
+                label: 'Email', // Keeping 'Email' as it is common, or should I use AppStrings.get('emailLabel')? 'emailLabel' is 'Correo Electrónico'. Let's use 'Email' hardcoded or add to AppStrings. I'll leave 'Email' for now or use 'emailLabel'. Let's use 'emailLabel' for consistency.
                 value: userEmail,
               ),
               const SizedBox(height: 16),
@@ -67,15 +68,15 @@ class _ProfileViewState extends State<ProfileView> {
               // Campo Teléfono de soporte
               _buildInfoCard(
                 icon: Icons.phone_outlined,
-                label: 'Tel. de Soporte',
+                label: AppStrings.get('supportPhone'),
                 value: supportPhone,
               ),
               const SizedBox(height: 32),
 
               // Sección QR
-              const Text(
-                'Código QR',
-                style: TextStyle(
+              Text(
+                AppStrings.get('qrCode'),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -113,7 +114,7 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Código QR',
+                        AppStrings.get('qrCode'),
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey[500],
@@ -122,7 +123,7 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Próximamente',
+                        AppStrings.get('comingSoon'),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[400],
@@ -133,6 +134,55 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
               ),
               const SizedBox(height: 32),
+
+              // Botón Eliminar Cuenta
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(AppStrings.get('deleteAccount')),
+                        content: Text(AppStrings.get('deleteAccountMsg')),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(AppStrings.get('cancel')),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              // Aquí iría la lógica de eliminación
+                              Navigator.pop(context);
+                            },
+                            child: Text(
+                              AppStrings.get('delete'),
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    AppStrings.get('deleteAccount'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

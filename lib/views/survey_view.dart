@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_strings.dart';
 
 class SurveyView extends StatefulWidget {
   const SurveyView({super.key});
@@ -51,8 +52,8 @@ class _SurveyViewState extends State<SurveyView> {
     if (_formKey.currentState!.validate()) {
       if (_selectedRoute == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor selecciona una ruta'),
+          SnackBar(
+            content: Text(AppStrings.get('routeError')),
             backgroundColor: Colors.red,
           ),
         );
@@ -60,8 +61,8 @@ class _SurveyViewState extends State<SurveyView> {
       }
       if (_selectedSchedule == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor selecciona un horario'),
+          SnackBar(
+            content: Text(AppStrings.get('scheduleError')),
             backgroundColor: Colors.red,
           ),
         );
@@ -69,8 +70,8 @@ class _SurveyViewState extends State<SurveyView> {
       }
       if (_cleanlinessRating == 0 || _attitudeRating == 0 || _drivingRating == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor califica todos los aspectos'),
+          SnackBar(
+            content: Text(AppStrings.get('rateAllAspects')),
             backgroundColor: Colors.red,
           ),
         );
@@ -78,8 +79,8 @@ class _SurveyViewState extends State<SurveyView> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Encuesta enviada exitosamente. ¡Gracias!'),
+        SnackBar(
+          content: Text(AppStrings.get('surveySent')),
           backgroundColor: Colors.green,
         ),
       );
@@ -101,7 +102,7 @@ class _SurveyViewState extends State<SurveyView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Encuesta'),
+        title: Text(AppStrings.get('survey')),
         backgroundColor: primaryOrange,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -137,7 +138,7 @@ class _SurveyViewState extends State<SurveyView> {
                 const SizedBox(height: 16),
                 Center(
                   child: Text(
-                    'Encuesta de Satisfacción',
+                    AppStrings.get('satisfactionSurvey'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -148,7 +149,7 @@ class _SurveyViewState extends State<SurveyView> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Tu opinión nos ayuda a mejorar',
+                    AppStrings.get('yourOpinionHelps'),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -158,17 +159,17 @@ class _SurveyViewState extends State<SurveyView> {
                 const SizedBox(height: 32),
 
                 // Campo Usuario
-                _buildLabel('Usuario'),
+                _buildLabel(AppStrings.get('userLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   decoration: _buildInputDecoration(
-                    hint: 'Ingresa tu nombre',
+                    hint: AppStrings.get('userHint'),
                     icon: Icons.person_outline,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu nombre';
+                      return AppStrings.get('userError');
                     }
                     return null;
                   },
@@ -176,21 +177,21 @@ class _SurveyViewState extends State<SurveyView> {
                 const SizedBox(height: 20),
 
                 // Campo Email
-                _buildLabel('Email'),
+                _buildLabel(AppStrings.get('emailLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: _buildInputDecoration(
-                    hint: 'correo@ejemplo.com',
+                    hint: AppStrings.get('emailHint'),
                     icon: Icons.email_outlined,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu email';
+                      return AppStrings.get('emailError');
                     }
                     if (!value.contains('@')) {
-                      return 'Ingresa un email válido';
+                      return AppStrings.get('emailInvalid');
                     }
                     return null;
                   },
@@ -198,11 +199,11 @@ class _SurveyViewState extends State<SurveyView> {
                 const SizedBox(height: 20),
 
                 // Selector de Ruta
-                _buildLabel('Ruta'),
+                _buildLabel(AppStrings.get('routeLabel')),
                 const SizedBox(height: 8),
                 _buildDropdown(
                   value: _selectedRoute,
-                  hint: 'Selecciona la ruta',
+                  hint: AppStrings.get('selectRouteHint'),
                   icon: Icons.route,
                   items: _routes,
                   onChanged: (value) {
@@ -214,11 +215,11 @@ class _SurveyViewState extends State<SurveyView> {
                 const SizedBox(height: 20),
 
                 // Selector de Horario
-                _buildLabel('Horario'),
+                _buildLabel(AppStrings.get('scheduleLabel')),
                 const SizedBox(height: 8),
                 _buildDropdown(
                   value: _selectedSchedule,
-                  hint: 'Selecciona el horario',
+                  hint: AppStrings.get('selectScheduleHint'),
                   icon: Icons.access_time,
                   items: _schedules,
                   onChanged: (value) {
@@ -247,8 +248,8 @@ class _SurveyViewState extends State<SurveyView> {
                         children: [
                           Icon(Icons.star, color: primaryOrange, size: 24),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Califica el Servicio',
+                          Text(
+                            AppStrings.get('rateService'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -259,7 +260,7 @@ class _SurveyViewState extends State<SurveyView> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Del 1 (Malo) al 5 (Excelente)',
+                        AppStrings.get('ratingScale'),
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey[600],
@@ -269,7 +270,7 @@ class _SurveyViewState extends State<SurveyView> {
 
                       // 1. Limpieza de las unidades
                       _buildRatingItem(
-                        title: '1. Limpieza de las unidades',
+                        title: AppStrings.get('unitCleanliness'),
                         icon: Icons.cleaning_services,
                         rating: _cleanlinessRating,
                         onRatingChanged: (rating) {
@@ -282,7 +283,7 @@ class _SurveyViewState extends State<SurveyView> {
 
                       // 2. Actitud del operador
                       _buildRatingItem(
-                        title: '2. Actitud del operador',
+                        title: AppStrings.get('operatorAttitude'),
                         icon: Icons.emoji_emotions,
                         rating: _attitudeRating,
                         onRatingChanged: (rating) {
@@ -295,7 +296,7 @@ class _SurveyViewState extends State<SurveyView> {
 
                       // 3. Forma de conducir del operador
                       _buildRatingItem(
-                        title: '3. Forma de conducir del operador',
+                        title: AppStrings.get('operatorDriving'),
                         icon: Icons.drive_eta,
                         rating: _drivingRating,
                         onRatingChanged: (rating) {
@@ -325,11 +326,11 @@ class _SurveyViewState extends State<SurveyView> {
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.send, size: 20),
                         SizedBox(width: 12),
                         Text(
-                          'Enviar Encuesta',
+                          AppStrings.get('sendSurvey'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -416,14 +417,14 @@ class _SurveyViewState extends State<SurveyView> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Malo',
+              AppStrings.get('bad'),
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
               ),
             ),
             Text(
-              'Excelente',
+              AppStrings.get('excellent'),
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],

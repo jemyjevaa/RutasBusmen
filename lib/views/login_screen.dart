@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'maps_view.dart';
 
+import '../utils/app_strings.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,13 +15,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usuarioController = TextEditingController();
   final TextEditingController _contrasenaController = TextEditingController();
   bool _mantenerSesion = false;
-  bool _showLanguageSheet = false;
   
-
   static const Color primaryOrange = Color(0xFFFF6B35); 
   static const Color primaryBlue = Color(0xFF007AFF);    
   static const Color backgroundGray = Color(0xFFF5F5F7);
-  
   
   bool get _isLargeScreen {
     final mediaQuery = MediaQuery.of(context);
@@ -28,6 +27,210 @@ class _LoginScreenState extends State<LoginScreen> {
   
   bool get _isSmallDevice {
     return MediaQuery.of(context).size.height < 670;
+  }
+
+  void _showLanguageSelectionSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[200]!),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    AppStrings.get('selectLanguage'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              
+              title: Text(AppStrings.get('spanish')),
+              trailing: AppStrings.currentLanguage == 'es' 
+                  ? const Icon(Icons.check, color: primaryOrange) 
+                  : null,
+              onTap: () {
+                setState(() {
+                  AppStrings.setLanguage('es');
+                });
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              
+              title: Text(AppStrings.get('english')),
+              trailing: AppStrings.currentLanguage == 'en' 
+                  ? const Icon(Icons.check, color: primaryOrange) 
+                  : null,
+              onTap: () {
+                setState(() {
+                  AppStrings.setLanguage('en');
+                });
+                Navigator.pop(context);
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRecoverySheet() {
+    final TextEditingController emailController = TextEditingController();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[200]!),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    AppStrings.get('recoverTitle'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppStrings.get('recoverDescription'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    
+                    Text(
+                      AppStrings.get('emailLabel'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: AppStrings.get('emailHint'),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: primaryOrange),
+                        ),
+                        prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (emailController.text.isNotEmpty) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(AppStrings.get('instructionsSent')),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryOrange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          AppStrings.get('sendInstructions'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -100,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             // Título "Inicio de sesión"
                             Text(
-                              'Inicio de sesión',
+                              AppStrings.get('loginTitle'),
                               style: TextStyle(
                                 fontSize: isTabletOrDesktop ? 28 : 24,
                                 fontWeight: FontWeight.bold,
@@ -113,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Usuario',
+                                  AppStrings.get('userLabel'),
                                   style: TextStyle(
                                     fontSize: isTabletOrDesktop ? 18 : 16,
                                     color: Colors.grey[600],
@@ -125,7 +328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   keyboardType: TextInputType.emailAddress,
                                   autocorrect: false,
                                   decoration: InputDecoration(
-                                    hintText: 'usuario@ejemplo.com',
+                                    hintText: AppStrings.get('userHint'),
                                     filled: true,
                                     fillColor: Colors.grey.withOpacity(0.1),
                                     border: OutlineInputBorder(
@@ -154,7 +357,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Contraseña',
+                                  AppStrings.get('passwordLabel'),
                                   style: TextStyle(
                                     fontSize: isTabletOrDesktop ? 18 : 16,
                                     color: Colors.grey[600],
@@ -166,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   obscureText: true,
                                   autocorrect: false,
                                   decoration: InputDecoration(
-                                    hintText: '**********',
+                                    hintText: AppStrings.get('passwordHint'),
                                     filled: true,
                                     fillColor: Colors.grey.withOpacity(0.1),
                                     border: OutlineInputBorder(
@@ -213,7 +416,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
-                                            'Mantener sesión',
+                                            AppStrings.get('keepSession'),
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontSize: isTabletOrDesktop ? 18 : 14,
@@ -228,11 +431,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                 // Botón cambiar idioma
                                 IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _showLanguageSheet = true;
-                                    });
-                                  },
+                                  onPressed: _showLanguageSelectionSheet,
                                   icon: Icon(
                                     Icons.language,
                                     color: Colors.grey,
@@ -266,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 child: Text(
-                                  'INICIAR SESIÓN',
+                                  AppStrings.get('loginButton'),
                                   style: TextStyle(
                                     fontSize: isTabletOrDesktop ? 18 : 16,
                                     fontWeight: FontWeight.bold,
@@ -280,11 +479,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             // Botón Recuperar Contraseña
                             Center(
                               child: TextButton(
-                                onPressed: () {
-                                  // Lógica de recuperación aquí
-                                },
+                                onPressed: _showRecoverySheet,
                                 child: Text(
-                                  'Recuperar contraseña',
+                                  AppStrings.get('recoverPassword'),
                                   style: TextStyle(
                                     fontSize: isTabletOrDesktop ? 18 : 14,
                                     color: primaryBlue,
