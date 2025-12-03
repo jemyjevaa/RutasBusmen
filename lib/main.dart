@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:geovoy_app/viewModel/login/UserViewModel.dart';
 import 'package:provider/provider.dart';
-import 'views/controller/login/UserModel.dart';
+import 'services/UserSession.dart';
 import 'views/login_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final session = UserSession();
+  await session.init();
+
   runApp(const MyApp());
 }
 

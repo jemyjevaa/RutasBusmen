@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'controller/login/UserModel.dart';
+import '../services/UserSession.dart';
+import '../viewModel/login/UserViewModel.dart';
 import 'maps_view.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,8 +14,17 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
 
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _pwdController = TextEditingController();
+  final session = UserSession();
+
   @override
   Widget build(BuildContext context) {
+
+    _emailController.text = session.isPersist ? session.email!! : '';
+    _pwdController.text = session.isPersist ? session.token!! : '';
+
+
     return Scaffold(
         body: Stack(
           children: [
@@ -93,6 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   TextField(
+                                    controller: _emailController,
                                     keyboardType: TextInputType.emailAddress,
                                     autocorrect: false,
                                     onChanged: vm.setUsername,
@@ -129,6 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   TextField(
+                                    controller: _pwdController,
                                     obscureText: true,
                                     autocorrect: false,
                                     onChanged: vm.setPassword,
@@ -160,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     children: [
                                       Expanded(
                                         child: InkWell(
-                                          onTap: vm.toggleMantenerSesion,
+                                          onTap: vm.togglePersistSession,
                                           child: Row(
                                             children: [
                                               Icon(
@@ -205,11 +217,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ? null
                                           : () async {
                                         bool success = await vm.login();
+
+                                        print("=> success: $success");
                                         if (success) {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(builder: (_) => const MapsView()),
                                           );
+                                          // print("=> entrar");
+                                          // session.clear();
                                         } else {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             const SnackBar(content: Text('Credenciales incorrectas')),
@@ -292,4 +308,11 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
   }
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.text = session.isPersist ? (session.email ?? '') : '';
+  }
+
 }
