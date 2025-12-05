@@ -173,10 +173,10 @@ class Empresa {
     "geocerca":geocerca,
     "notificacion_id":notificacionId,
     "notificacion_key":notificacionKey,
-    "estatus":nombre,
-    "imagen":nombre,
-    "usuario_alta":nombre,
-    "turno":nombre,
+    "estatus":estatus,
+    "imagen":imagen,
+    "usuario_alta":usuarioAlta,
+    "turno":turno,
   };
 
 }

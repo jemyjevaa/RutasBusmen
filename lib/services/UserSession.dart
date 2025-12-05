@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'ResponseServ.dart';
+
 class UserSession {
   static final UserSession _instance = UserSession._internal();
   SharedPreferences? _prefs;
@@ -40,10 +42,12 @@ class UserSession {
     await _prefs?.setString('userData', jsonString);
   }
 
-  Map<String, dynamic>? getUserData() {
+  Usuario? getUserData() {
     final jsonString = _prefs?.getString('userData');
     if (jsonString == null || jsonString.isEmpty) return null;
-    return jsonDecode(jsonString);
+
+    final Map<String, dynamic> map = jsonDecode(jsonString);
+    return Usuario.fromJson(map);
   }
 
   Future<void> setCompanyData(Map<String, dynamic> companyData)async{
@@ -51,11 +55,14 @@ class UserSession {
     await _prefs?.setString('companyData', jsonString);
   }
 
-  Map<String, dynamic>? getCompanyData(Map<String, dynamic> companyData){
+  Empresa? getCompanyData() {
     final jsonString = _prefs?.getString('companyData');
     if (jsonString == null || jsonString.isEmpty) return null;
-    return null;
+
+    final Map<String, dynamic> map = jsonDecode(jsonString);
+    return Empresa.fromJson(map);
   }
+
 
   // endregion Login Data
 

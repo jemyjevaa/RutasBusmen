@@ -71,6 +71,8 @@ class LoginViewModel extends ChangeNotifier {
       session.token = pwdParam;
     }
 
+    // print("=> userParam: $userParam | pwdParam: $pwdParam");
+
     await Future.delayed(Duration(seconds: 1));
 
     try{
@@ -81,11 +83,14 @@ class LoginViewModel extends ChangeNotifier {
         asJson: true,
         fromJson: (json) => ApiResLogin.fromJson(json),
       );
-
-      print("=> ${response?.respuesta??false}");
+      session.clear();
+      // print("=> ${response?.respuesta??false}");
 
       session.setUserData(response!.usuario.toJson());
       session.setCompanyData(response.empresa.toJson());
+
+      // print("empresa => ${response.empresa.toJson()}");
+      // print("getCompanyData => ${session.getCompanyData()}");
 
       return response?.respuesta??false;
     }catch( excep ){
