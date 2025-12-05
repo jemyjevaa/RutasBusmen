@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geovoy_app/services/ResponseServ.dart';
+import 'package:geovoy_app/views/login_screen.dart';
 import 'package:geovoy_app/views/widgets/BuildImgWidget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/UserSession.dart';
@@ -49,8 +50,6 @@ class _MapsViewState extends State<MapsView> {
 
     double lat = double.parse(newLatLon!.split(",")[0]);
     double lon = double.parse(newLatLon!.split(",")[1]);
-
-    print("${company?.latitudLongitud[0]} ${company?.latitudLongitud[1]}");
 
     moveCamera(lat, lon);
 
@@ -258,6 +257,12 @@ class _MapsViewState extends State<MapsView> {
                     textColor: Colors.red,
                     onTap: () {
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
                       // Cerrar sesión
                     },
                   ),

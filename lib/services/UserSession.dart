@@ -68,7 +68,9 @@ class UserSession {
 
   // Limpiar datos
   Future<void> clear() async {
-    await _prefs?.remove("userData");
+    _prefs?.remove("userData");
+    _prefs?.remove("companyData");
+    isLogin = false;
     // setUserData(null);
   }
 }

@@ -20,6 +20,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print("after user: ${session.getUserData()} | company: ${session.getCompanyData()}");
+    session.clear();
+    print("before user: ${session.getUserData()} | company: ${session.getCompanyData()}");
 
     _emailController.text = session.isPersist ? session.email!! : '';
     _pwdController.text = session.isPersist ? session.token!! : '';
@@ -218,8 +221,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                           : () async {
                                         bool success = await vm.login();
 
-                                        print("=> success: $success");
+                                        // print("=> success: $success");
                                         if (success) {
+                                          session.isLogin = success;
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(builder: (_) => const MapsView()),
