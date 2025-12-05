@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../utils/app_strings.dart';
+import '../widgets/route_selector.dart';
+import '../models/route_model.dart';
+import '../widgets/animated_result_dialog.dart';
 
 class LostObjectsView extends StatefulWidget {
   const LostObjectsView({super.key});
@@ -15,16 +19,8 @@ class _LostObjectsViewState extends State<LostObjectsView> {
   final _phoneController = TextEditingController();
   final _descriptionController = TextEditingController();
   
-  String? _selectedRoute;
+  RouteData? _selectedRoute;
   DateTime? _selectedDate;
-
-  final List<String> _routes = [
-    'LA VIRGEN',
-    'SAN PEDRO',
-    'CENTRO',
-    'UNIVERSIDAD',
-    'TERMINAL',
-  ];
 
   @override
   void dispose() {
@@ -63,30 +59,30 @@ class _LostObjectsViewState extends State<LostObjectsView> {
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       if (_selectedRoute == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor selecciona una ruta'),
-            backgroundColor: Colors.red,
-          ),
+        AnimatedResultDialog.showError(
+          context,
+          title: 'Error',
+          message: AppStrings.get('routeError'),
         );
         return;
       }
       if (_selectedDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor selecciona una fecha'),
-            backgroundColor: Colors.red,
-          ),
+        AnimatedResultDialog.showError(
+          context,
+          title: 'Error',
+          message: AppStrings.get('dateError'),
         );
         return;
       }
 
       // Aquí iría la lógica para enviar el formulario
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Reporte enviado exitosamente'),
-          backgroundColor: Colors.green,
-        ),
+      AnimatedResultDialog.showSuccess(
+        context,
+        title: '¡Gracias!',
+        message: AppStrings.get('reportSent'),
+        onDismiss: () {
+          // Optional: Navigate back or do something else
+        },
       );
 
       // Limpiar formulario
@@ -104,7 +100,7 @@ class _LostObjectsViewState extends State<LostObjectsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Objetos Perdidos'),
+        title: Text(AppStrings.get('lostObjects')),
         backgroundColor: primaryOrange,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -140,7 +136,7 @@ class _LostObjectsViewState extends State<LostObjectsView> {
                 const SizedBox(height: 16),
                 Center(
                   child: Text(
-                    'Reportar Objeto Perdido',
+                    AppStrings.get('reportLostObject'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -151,7 +147,7 @@ class _LostObjectsViewState extends State<LostObjectsView> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Completa el formulario para reportar tu objeto',
+                    AppStrings.get('fillFormMsg'),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -162,17 +158,17 @@ class _LostObjectsViewState extends State<LostObjectsView> {
                 const SizedBox(height: 32),
 
                 // Campo Nombre
-                _buildLabel('Nombre de Usuario'),
+                _buildLabel(AppStrings.get('nameLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   decoration: _buildInputDecoration(
-                    hint: 'Ingresa tu nombre completo',
+                    hint: AppStrings.get('nameHint'),
                     icon: Icons.person_outline,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu nombre';
+                      return AppStrings.get('nameError');
                     }
                     return null;
                   },
@@ -180,72 +176,43 @@ class _LostObjectsViewState extends State<LostObjectsView> {
                 const SizedBox(height: 20),
 
                 // Campo Teléfono
-                _buildLabel('Teléfono'),
+                _buildLabel(AppStrings.get('phoneLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: _buildInputDecoration(
-                    hint: 'Ingresa tu número de teléfono',
+                    hint: AppStrings.get('phoneHint'),
                     icon: Icons.phone_outlined,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu teléfono';
+                      return AppStrings.get('phoneError');
                     }
                     if (value.length < 10) {
-                      return 'Ingresa un número válido';
+                      return AppStrings.get('phoneInvalid');
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
 
-                // Selector de Ruta
-                _buildLabel('Selección de Ruta'),
+                // Route Selector
+                _buildLabel(AppStrings.get('routeLabel')),
                 const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedRoute,
-                    decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.route, color: primaryOrange),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      hintText: 'Selecciona la ruta',
-                      hintStyle: TextStyle(color: Colors.grey[400]),
-                    ),
-                    items: _routes.map((String route) {
-                      return DropdownMenuItem<String>(
-                        value: route,
-                        child: Text(route),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedRoute = newValue;
-                      });
-                    },
-                  ),
+                RouteSelector(
+                  selectedRoute: _selectedRoute,
+                  onRouteSelected: (route) {
+                    setState(() {
+                      _selectedRoute = route;
+                    });
+                  },
+                  primaryColor: primaryOrange,
                 ),
                 const SizedBox(height: 20),
 
                 // Selector de Fecha
-                _buildLabel('Fecha'),
+                _buildLabel(AppStrings.get('dateLabel')),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () => _selectDate(context),
@@ -269,7 +236,7 @@ class _LostObjectsViewState extends State<LostObjectsView> {
                         const SizedBox(width: 16),
                         Text(
                           _selectedDate == null
-                              ? 'Selecciona la fecha'
+                              ? AppStrings.get('selectDate')
                               : '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
                           style: TextStyle(
                             fontSize: 16,
@@ -285,21 +252,21 @@ class _LostObjectsViewState extends State<LostObjectsView> {
                 const SizedBox(height: 20),
 
                 // Campo Descripción
-                _buildLabel('Descripción del Objeto'),
+                _buildLabel(AppStrings.get('descriptionLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _descriptionController,
                   maxLines: 5,
                   decoration: _buildInputDecoration(
-                    hint: 'Describe el objeto perdido (color, tamaño, características...)',
+                    hint: AppStrings.get('descriptionHint'),
                     icon: Icons.description_outlined,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor describe el objeto';
+                      return AppStrings.get('descriptionError');
                     }
                     if (value.length < 10) {
-                      return 'La descripción debe tener al menos 10 caracteres';
+                      return AppStrings.get('descriptionLengthError');
                     }
                     return null;
                   },
@@ -322,11 +289,11 @@ class _LostObjectsViewState extends State<LostObjectsView> {
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.send, size: 20),
                         SizedBox(width: 12),
                         Text(
-                          'Enviar Reporte',
+                          AppStrings.get('submitReport'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

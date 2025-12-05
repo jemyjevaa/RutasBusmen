@@ -9,8 +9,14 @@ import 'notifications_view.dart';
 import 'profile_view.dart';
 import 'stops_view.dart';
 import 'lost_objects_view.dart';
+import 'assistance_chat_view.dart';
 import 'suggestions_view.dart';
 import 'survey_view.dart';
+import 'login_screen.dart';
+import '../utils/app_strings.dart';
+import '../viewmodels/route_viewmodel.dart';
+import '../models/route_model.dart';
+import '../models/route_stop_model.dart';
 
 class MapsView extends StatefulWidget {
   const MapsView({super.key});
@@ -37,6 +43,25 @@ class _MapsViewState extends State<MapsView> {
   bool _isInfoExpanded = false;
   
   static const Color primaryOrange = Color(0xFFFF6B35);
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch routes when view loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = context.read<RouteViewModel>();
+      viewModel.fetchRoutes();
+      viewModel.addListener(_onRouteViewModelChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    try {
+      context.read<RouteViewModel>().removeListener(_onRouteViewModelChanged);
+    } catch (_) {}
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +156,7 @@ class _MapsViewState extends State<MapsView> {
                 children: [
                   _buildDrawerItem(
                     icon: Icons.person,
-                    title: 'Perfil',
+                    title: AppStrings.get('profile'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -144,7 +169,7 @@ class _MapsViewState extends State<MapsView> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.directions_bus,
-                    title: 'Paradas',
+                    title: AppStrings.get('stops'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -157,15 +182,21 @@ class _MapsViewState extends State<MapsView> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.support_agent,
-                    title: 'Asistencia',
+                    title: AppStrings.get('assistance'),
                     onTap: () {
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AssistanceChatView(),
+                        ),
+                      );
                     },
                   ),
 
                    _buildDrawerItem(
                     icon: Icons.error,
-                    title: 'Objetos Perdidos',
+                    title: AppStrings.get('lostObjects'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -179,7 +210,7 @@ class _MapsViewState extends State<MapsView> {
                   
                   _buildDrawerItem(
                     icon: Icons.comment,
-                    title: 'Sugerencias',
+                    title: AppStrings.get('suggestions'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -193,7 +224,7 @@ class _MapsViewState extends State<MapsView> {
 
                    _buildDrawerItem(
                     icon: Icons.info,
-                    title: 'Información',
+                    title: AppStrings.get('information'),
                     onTap: () {
                       setState(() {
                         _isInfoExpanded = !_isInfoExpanded;
@@ -209,7 +240,7 @@ class _MapsViewState extends State<MapsView> {
                   if (_isInfoExpanded) ...[
                     _buildDrawerSubItem(
                       icon: Icons.campaign,
-                      title: 'Comunicados',
+                      title: AppStrings.get('announcements'),
                       onTap: () {
                         Navigator.pop(context);
                         // Navegar a Comunicados
@@ -217,7 +248,7 @@ class _MapsViewState extends State<MapsView> {
                     ),
                     _buildDrawerSubItem(
                       icon: Icons.gavel,
-                      title: 'Reglamentación',
+                      title: AppStrings.get('regulations'),
                       onTap: () {
                         Navigator.pop(context);
                         // Navegar a Reglamentación
@@ -225,7 +256,7 @@ class _MapsViewState extends State<MapsView> {
                     ),
                     _buildDrawerSubItem(
                       icon: Icons.menu_book,
-                      title: 'Manual de Usuario',
+                      title: AppStrings.get('userManual'),
                       onTap: () {
                         Navigator.pop(context);
                         // Navegar a Manual
@@ -235,7 +266,7 @@ class _MapsViewState extends State<MapsView> {
                   
                   _buildDrawerItem(
                     icon: Icons.mood,
-                    title: 'Encuesta',
+                    title: AppStrings.get('survey'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -252,7 +283,7 @@ class _MapsViewState extends State<MapsView> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.logout,
-                    title: 'Cerrar sesión',
+                    title: AppStrings.get('logout'),
                     iconColor: Colors.red,
                     textColor: Colors.red,
                     onTap: () {
@@ -283,6 +314,8 @@ class _MapsViewState extends State<MapsView> {
             },
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
+            markers: markers,
+            polylines: polylines,
           ),
           
           // Botones flotantes en la parte superior
@@ -328,7 +361,7 @@ class _MapsViewState extends State<MapsView> {
                 if (_isMapMenuExpanded) ...[
                   _buildMapTypeOption(
                     icon: Icons.map,
-                    label: 'Normal',
+                    label: AppStrings.get('mapTypeNormal'),
                     isSelected: _currentMapType == MapType.normal,
                     onTap: () {
                       setState(() {
@@ -340,7 +373,7 @@ class _MapsViewState extends State<MapsView> {
                   const SizedBox(height: 12),
                   _buildMapTypeOption(
                     icon: Icons.satellite,
-                    label: 'Satélite',
+                    label: AppStrings.get('mapTypeSatellite'),
                     isSelected: _currentMapType == MapType.satellite,
                     onTap: () {
                       setState(() {
@@ -352,7 +385,7 @@ class _MapsViewState extends State<MapsView> {
                   const SizedBox(height: 12),
                   _buildMapTypeOption(
                     icon: Icons.terrain,
-                    label: 'Híbrido',
+                    label: AppStrings.get('mapTypeHybrid'),
                     isSelected: _currentMapType == MapType.hybrid,
                     onTap: () {
                       setState(() {
@@ -376,10 +409,157 @@ class _MapsViewState extends State<MapsView> {
             ),
           ),
           
-          // Botón "Seleccionar Ruta" en la parte inferior izquierda
+          
+          // Menú de Tipos de Mapa (FAB)
+          Positioned(
+            right: 16,
+            bottom: 100,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isMapMenuExpanded) ...[
+                  _buildMapTypeOption(
+                    icon: Icons.map_outlined,
+                    label: AppStrings.get('mapTypeNormal'),
+                    isSelected: _currentMapType == MapType.normal,
+                    onTap: () {
+                      setState(() {
+                        _currentMapType = MapType.normal;
+                        _isMapMenuExpanded = false;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMapTypeOption(
+                    icon: Icons.satellite_outlined,
+                    label: AppStrings.get('mapTypeSatellite'),
+                    isSelected: _currentMapType == MapType.satellite,
+                    onTap: () {
+                      setState(() {
+                        _currentMapType = MapType.satellite;
+                        _isMapMenuExpanded = false;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMapTypeOption(
+                    icon: Icons.terrain_outlined,
+                    label: AppStrings.get('mapTypeHybrid'),
+                    isSelected: _currentMapType == MapType.hybrid,
+                    onTap: () {
+                      setState(() {
+                        _currentMapType = MapType.hybrid;
+                        _isMapMenuExpanded = false;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _buildFloatingButton(
+                  icon: _isMapMenuExpanded ? Icons.close : Icons.layers,
+                  onTap: () {
+                    setState(() {
+                      _isMapMenuExpanded = !_isMapMenuExpanded;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Banner de Estado de Ruta (Izquierda)
           Positioned(
             left: 16,
-            bottom: 100,
+            right: 90, // Dejar espacio para el FAB
+            bottom: 100, // Alineado con el FAB
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(
+                  color: _currentSelectedRoute != null 
+                      ? (_currentSelectedRoute!.isActiveNow() ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5))
+                      : Colors.grey.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _currentSelectedRoute != null 
+                              ? _currentSelectedRoute!.displayName
+                              : AppStrings.get('noRouteSelected'),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: _currentSelectedRoute != null 
+                                    ? (_currentSelectedRoute!.isActiveNow() ? Colors.green : Colors.orange)
+                                    : Colors.grey,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _currentSelectedRoute != null 
+                                    ? (_currentSelectedRoute!.isActiveNow() 
+                                        ? '${AppStrings.get('routeActive')} (${_currentSelectedRoute!.timeRange})' 
+                                        : '${AppStrings.get('outOfSchedule')} (${_currentSelectedRoute!.timeRange})')
+                                    : AppStrings.get('selectRouteMsg'),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_currentSelectedRoute != null)
+                    Icon(
+                      _currentSelectedRoute!.isActiveNow() ? Icons.check_circle_outline : Icons.schedule,
+                      color: _currentSelectedRoute!.isActiveNow() ? Colors.green : Colors.orange,
+                      size: 20,
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          
+          Positioned(
+            left: 16,
+            right: 90, 
+            bottom: 30, 
             child: Container(
               decoration: BoxDecoration(
                 boxShadow: [
@@ -392,19 +572,12 @@ class _MapsViewState extends State<MapsView> {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // Funcionalidad para seleccionar ruta (próximamente)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Funcionalidad próximamente'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  _showRouteSelectionSheet(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryOrange,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
                     vertical: 14,
                   ),
                   shape: RoundedRectangleBorder(
@@ -413,9 +586,9 @@ class _MapsViewState extends State<MapsView> {
                   elevation: 0,
                 ),
                 icon: const Icon(Icons.route, size: 20),
-                label: const Text(
-                  'Seleccionar Ruta',
-                  style: TextStyle(
+                label: Text(
+                  AppStrings.get('selectRoute'),
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),

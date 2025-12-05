@@ -4,6 +4,8 @@ import 'package:geovoy_app/views/maps_view.dart';
 import 'package:provider/provider.dart';
 import 'services/UserSession.dart';
 import 'views/login_screen.dart';
+import 'viewmodels/route_viewmodel.dart';
+import 'utils/app_strings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../utils/app_strings.dart';
+import '../widgets/route_selector.dart';
+import '../models/route_model.dart';
+import '../widgets/animated_result_dialog.dart';
 
 class SuggestionsView extends StatefulWidget {
   const SuggestionsView({super.key});
@@ -16,16 +20,8 @@ class _SuggestionsViewState extends State<SuggestionsView> {
   final _unitController = TextEditingController();
   final _commentController = TextEditingController();
   
-  String? _selectedRoute;
+  RouteData? _selectedRoute;
   String? _selectedSchedule;
-
-  final List<String> _routes = [
-    'LA VIRGEN',
-    'SAN PEDRO',
-    'CENTRO',
-    'UNIVERSIDAD',
-    'TERMINAL',
-  ];
 
   final List<String> _schedules = [
     '06:00 - 08:00',
@@ -49,29 +45,29 @@ class _SuggestionsViewState extends State<SuggestionsView> {
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       if (_selectedRoute == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor selecciona una ruta'),
-            backgroundColor: Colors.red,
-          ),
+        AnimatedResultDialog.showError(
+          context,
+          title: 'Error',
+          message: AppStrings.get('routeError'),
         );
         return;
       }
       if (_selectedSchedule == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor selecciona un horario'),
-            backgroundColor: Colors.red,
-          ),
+        AnimatedResultDialog.showError(
+          context,
+          title: 'Error',
+          message: AppStrings.get('scheduleError'),
         );
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sugerencia enviada exitosamente'),
-          backgroundColor: Colors.green,
-        ),
+      AnimatedResultDialog.showSuccess(
+        context,
+        title: '¡Gracias!',
+        message: AppStrings.get('suggestionSent'),
+        onDismiss: () {
+          // Optional: Navigate back or do something else
+        },
       );
 
       // Limpiar formulario
@@ -90,7 +86,7 @@ class _SuggestionsViewState extends State<SuggestionsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sugerencias'),
+        title: Text(AppStrings.get('suggestions')),
         backgroundColor: primaryOrange,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -126,7 +122,7 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                 const SizedBox(height: 16),
                 Center(
                   child: Text(
-                    'Tus Sugerencias Importan',
+                    AppStrings.get('yourSuggestionsMatters'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -137,7 +133,7 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Ayúdanos a mejorar nuestro servicio',
+                    AppStrings.get('helpUsImprove'),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -147,17 +143,17 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                 const SizedBox(height: 32),
 
                 // Campo Usuario
-                _buildLabel('Usuario'),
+                _buildLabel(AppStrings.get('userLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   decoration: _buildInputDecoration(
-                    hint: 'Ingresa tu nombre',
+                    hint: AppStrings.get('userHint'),
                     icon: Icons.person_outline,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu nombre';
+                      return AppStrings.get('userError');
                     }
                     return null;
                   },
@@ -165,49 +161,47 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                 const SizedBox(height: 20),
 
                 // Campo Email
-                _buildLabel('Email'),
+                _buildLabel(AppStrings.get('emailLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: _buildInputDecoration(
-                    hint: 'correo@ejemplo.com',
+                    hint: AppStrings.get('emailHint'),
                     icon: Icons.email_outlined,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu email';
+                      return AppStrings.get('emailError');
                     }
                     if (!value.contains('@')) {
-                      return 'Ingresa un email válido';
+                      return AppStrings.get('emailInvalid');
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
 
-                // Selector de Ruta
-                _buildLabel('Selección de Ruta'),
+                // Route Selector
+                _buildLabel(AppStrings.get('selectRouteLabel')),
                 const SizedBox(height: 8),
-                _buildDropdown(
-                  value: _selectedRoute,
-                  hint: 'Selecciona la ruta',
-                  icon: Icons.route,
-                  items: _routes,
-                  onChanged: (value) {
+                RouteSelector(
+                  selectedRoute: _selectedRoute,
+                  onRouteSelected: (route) {
                     setState(() {
-                      _selectedRoute = value;
+                      _selectedRoute = route;
                     });
                   },
+                  primaryColor: primaryOrange,
                 ),
                 const SizedBox(height: 20),
 
                 // Selector de Horario
-                _buildLabel('Selección de Horario'),
+                _buildLabel(AppStrings.get('selectScheduleLabel')),
                 const SizedBox(height: 8),
                 _buildDropdown(
                   value: _selectedSchedule,
-                  hint: 'Selecciona el horario',
+                  hint: AppStrings.get('selectScheduleHint'),
                   icon: Icons.access_time,
                   items: _schedules,
                   onChanged: (value) {
@@ -219,18 +213,18 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                 const SizedBox(height: 20),
 
                 // Campo Unidad
-                _buildLabel('Unidad'),
+                _buildLabel(AppStrings.get('unitLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _unitController,
                   keyboardType: TextInputType.number,
                   decoration: _buildInputDecoration(
-                    hint: 'Número de unidad',
+                    hint: AppStrings.get('unitHint'),
                     icon: Icons.directions_bus,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa el número de unidad';
+                      return AppStrings.get('unitError');
                     }
                     return null;
                   },
@@ -238,21 +232,21 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                 const SizedBox(height: 20),
 
                 // Campo Comentario
-                _buildLabel('Comentario o Sugerencia'),
+                _buildLabel(AppStrings.get('commentLabel')),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _commentController,
                   maxLines: 5,
                   decoration: _buildInputDecoration(
-                    hint: 'Escribe tu comentario o sugerencia...',
+                    hint: AppStrings.get('commentHint'),
                     icon: Icons.comment_outlined,
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor escribe tu comentario';
+                      return AppStrings.get('commentError');
                     }
                     if (value.length < 10) {
-                      return 'El comentario debe tener al menos 10 caracteres';
+                      return AppStrings.get('commentLengthError');
                     }
                     return null;
                   },
@@ -275,11 +269,11 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.send, size: 20),
                         SizedBox(width: 12),
                         Text(
-                          'Enviar Sugerencia',
+                          AppStrings.get('sendSuggestion'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
