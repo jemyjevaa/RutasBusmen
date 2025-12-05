@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geovoy_app/viewModel/login/UserViewModel.dart';
+import 'package:geovoy_app/viewmodels/route_viewmodel.dart';
 import 'package:geovoy_app/views/maps_view.dart';
 import 'package:provider/provider.dart';
 import 'services/UserSession.dart';
@@ -12,6 +13,7 @@ void main() async {
 
   runApp(MyApp(session: session));
 }
+
 class MyApp extends StatelessWidget {
   final UserSession session;
   const MyApp({super.key, required this.session});
@@ -19,10 +21,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
-    var mainScreen = session.isLogin ? MapsView() : LoginScreen();
-
-    return ChangeNotifierProvider(
-      create: (context) => LoginViewModel(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LoginViewModel()),
+        ChangeNotifierProvider(create: (_) => RouteViewModel()),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Rutas Busmen',
@@ -30,7 +33,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           scaffoldBackgroundColor: const Color(0xFFF5F5F7),
         ),
-        home: mainScreen,
+        home: session.isLogin ? MapsView() : LoginScreen(),
       ),
     );
   }
