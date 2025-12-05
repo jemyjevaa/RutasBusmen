@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geovoy_app/services/ResponseServ.dart';
+import 'package:geovoy_app/views/login_screen.dart';
+import 'package:geovoy_app/views/widgets/BuildImgWidget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../services/UserSession.dart';
 import 'notifications_view.dart';
 import 'profile_view.dart';
 import 'stops_view.dart';
@@ -16,23 +20,40 @@ class MapsView extends StatefulWidget {
 }
 
 class _MapsViewState extends State<MapsView> {
+
+  final session = UserSession();
+
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  
-  MapType _currentMapType = MapType.normal;
-  bool _isMapMenuExpanded = false;
-  bool _isInfoExpanded = false;
 
-  static const CameraPosition _kGooglePlex = CameraPosition(
+  static CameraPosition kGooglePlex = const CameraPosition(
     target: LatLng(20.543508165491687, -103.47583907776028),
     zoom: 14.4746,
   );
+
+  MapType _currentMapType = MapType.normal;
+  bool _isMapMenuExpanded = false;
+  bool _isInfoExpanded = false;
   
   static const Color primaryOrange = Color(0xFFFF6B35);
 
   @override
   Widget build(BuildContext context) {
+
+    Empresa? company = session.getCompanyData();
+    Usuario? user = session.getUserData();
+
+    String urlImg = company?.imagen.replaceAll(RegExp(r"\s+"), "%20") ?? 'assets/images/logos/LogoBusmen.png';
+
+    String? newLatLon = company?.latitudLongitud;
+
+    double lat = double.parse(newLatLon!.split(",")[0]);
+    double lon = double.parse(newLatLon!.split(",")[1]);
+
+    moveCamera(lat, lon);
+
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
@@ -46,19 +67,20 @@ class _MapsViewState extends State<MapsView> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [primaryOrange, Color(0xFFFF8C5A)],
+                  colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
                 ),
               ),
               child: Column(
                 children: [
                   const SizedBox(height: 50),
                   // Logo Busmen
-                  Image.asset(
-                    'assets/images/logos/LogoBusmen.png',
-                    width: 180,
-                    height: 80,
-                    fit: BoxFit.contain,
-                  ),
+                  buildImage(urlImg),
+                  // Image.asset(
+                  //   urlImg,
+                  //   width: 180,
+                  //   height: 80,
+                  //   fit: BoxFit.contain,
+                  // ),
                   const SizedBox(height: 16),
                   // Información del usuario
                   Row(
@@ -79,20 +101,18 @@ class _MapsViewState extends State<MapsView> {
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children:  [
                           Text(
-                            'User Name',
+                            user!.nombre,
                             style: TextStyle(
-                              color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           SizedBox(height: 2),
                           Text(
-                            'user@email.com',
+                            user!.email,
                             style: TextStyle(
-                              color: Colors.white70,
                               fontSize: 13,
                             ),
                           ),
@@ -237,6 +257,12 @@ class _MapsViewState extends State<MapsView> {
                     textColor: Colors.red,
                     onTap: () {
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
                       // Cerrar sesión
                     },
                   ),
@@ -251,7 +277,7 @@ class _MapsViewState extends State<MapsView> {
           // Mapa de fondo
           GoogleMap(
             mapType: _currentMapType,
-            initialCameraPosition: _kGooglePlex,
+            initialCameraPosition: kGooglePlex,
             onMapCreated: (GoogleMapController controller) {
               _controller.complete(controller);
             },
@@ -579,4 +605,20 @@ class _MapsViewState extends State<MapsView> {
       ),
     );
   }
+
+  Future<void> moveCamera(double lat, double lng) async {
+    final GoogleMapController controller = await _controller.future;
+
+    controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: LatLng(lat, lng),
+          zoom: 15.0,  // Puedes ajustar el zoom
+        ),
+      ),
+    );
+  }
+
 }
+
+
