@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../utils/app_strings.dart';
+import '../widgets/route_selector.dart';
+import '../models/route_model.dart';
+import '../widgets/animated_result_dialog.dart';
 
 class SuggestionsView extends StatefulWidget {
   const SuggestionsView({super.key});
@@ -17,16 +20,8 @@ class _SuggestionsViewState extends State<SuggestionsView> {
   final _unitController = TextEditingController();
   final _commentController = TextEditingController();
   
-  String? _selectedRoute;
+  RouteData? _selectedRoute;
   String? _selectedSchedule;
-
-  final List<String> _routes = [
-    'LA VIRGEN',
-    'SAN PEDRO',
-    'CENTRO',
-    'UNIVERSIDAD',
-    'TERMINAL',
-  ];
 
   final List<String> _schedules = [
     '06:00 - 08:00',
@@ -50,29 +45,29 @@ class _SuggestionsViewState extends State<SuggestionsView> {
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       if (_selectedRoute == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppStrings.get('routeError')),
-            backgroundColor: Colors.red,
-          ),
+        AnimatedResultDialog.showError(
+          context,
+          title: 'Error',
+          message: AppStrings.get('routeError'),
         );
         return;
       }
       if (_selectedSchedule == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppStrings.get('scheduleError')),
-            backgroundColor: Colors.red,
-          ),
+        AnimatedResultDialog.showError(
+          context,
+          title: 'Error',
+          message: AppStrings.get('scheduleError'),
         );
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppStrings.get('suggestionSent')),
-          backgroundColor: Colors.green,
-        ),
+      AnimatedResultDialog.showSuccess(
+        context,
+        title: '¡Gracias!',
+        message: AppStrings.get('suggestionSent'),
+        onDismiss: () {
+          // Optional: Navigate back or do something else
+        },
       );
 
       // Limpiar formulario
@@ -187,19 +182,17 @@ class _SuggestionsViewState extends State<SuggestionsView> {
                 ),
                 const SizedBox(height: 20),
 
-                // Selector de Ruta
+                // Route Selector
                 _buildLabel(AppStrings.get('selectRouteLabel')),
                 const SizedBox(height: 8),
-                _buildDropdown(
-                  value: _selectedRoute,
-                  hint: AppStrings.get('selectRouteHint'),
-                  icon: Icons.route,
-                  items: _routes,
-                  onChanged: (value) {
+                RouteSelector(
+                  selectedRoute: _selectedRoute,
+                  onRouteSelected: (route) {
                     setState(() {
-                      _selectedRoute = value;
+                      _selectedRoute = route;
                     });
                   },
+                  primaryColor: primaryOrange,
                 ),
                 const SizedBox(height: 20),
 

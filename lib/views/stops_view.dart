@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/route_selector.dart';
+import '../models/route_model.dart';
 
 class StopsView extends StatefulWidget {
   const StopsView({super.key});
@@ -9,6 +11,9 @@ class StopsView extends StatefulWidget {
 
 class _StopsViewState extends State<StopsView> {
   static const Color primaryOrange = Color(0xFFFF6B35);
+  
+  // Ruta seleccionada
+  RouteData? _selectedRoute;
 
   // Datos de ejemplo de paradas
   final List<Map<String, dynamic>> _stops = [
@@ -67,70 +72,106 @@ class _StopsViewState extends State<StopsView> {
       ),
       body: Column(
         children: [
-          // Header con información de la ruta
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: primaryOrange.withOpacity(0.1),
-              border: Border(
-                bottom: BorderSide(
-                  color: primaryOrange.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: primaryOrange,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.directions_bus,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Ruta: LA VIRGEN',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '6 paradas • 1h 15min',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          // Route Selector
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: RouteSelector(
+              selectedRoute: _selectedRoute,
+              onRouteSelected: (route) {
+                setState(() {
+                  _selectedRoute = route;
+                });
+              },
+              primaryColor: primaryOrange,
             ),
           ),
 
+          // Header con información de la ruta (solo si hay ruta seleccionada)
+          if (_selectedRoute != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: primaryOrange.withOpacity(0.1),
+                border: Border(
+                  bottom: BorderSide(
+                    color: primaryOrange.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: primaryOrange,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.directions_bus,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ruta: ${_selectedRoute!.nombreRuta}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_stops.length} paradas • ${_selectedRoute!.timeRange}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Lista de paradas
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _stops.length,
-              itemBuilder: (context, index) {
-                return _buildStopItem(_stops[index], index, _stops.length);
-              },
-            ),
+            child: _selectedRoute != null
+                ? ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _stops.length,
+                    itemBuilder: (context, index) {
+                      return _buildStopItem(_stops[index], index, _stops.length);
+                    },
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.route,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Selecciona una ruta para ver las paradas',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
@@ -138,8 +179,10 @@ class _StopsViewState extends State<StopsView> {
   }
 
   Widget _buildStopItem(Map<String, dynamic> stop, int index, int total) {
-    final bool isPassed = stop['isPassed'] ?? false;
-    final bool isNext = stop['isNext'] ?? false;
+    // Solo marcar como pasadas si la ruta está activa
+    final bool isRouteActive = _selectedRoute?.isActiveNow() ?? false;
+    final bool isPassed = isRouteActive ? (stop['isPassed'] ?? false) : false;
+    final bool isNext = isRouteActive ? (stop['isNext'] ?? false) : false;
     final bool isLast = index == total - 1;
 
     return Row(

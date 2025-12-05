@@ -138,7 +138,13 @@ class AppStrings {
       'sendSurvey': 'Enviar Encuesta',
       'surveySent': 'Encuesta enviada exitosamente. ¡Gracias!',
       'rateAllAspects': 'Por favor califica todos los aspectos',
+
+      //ENVIO DE DATOS
+      'Thanks' : 'Gracias',
+      'Error': 'Error',
     },
+
+    //LOCALIZABLES INGLÉS
     'en': {
       // Login
       'loginTitle': 'Login',
@@ -261,6 +267,10 @@ class AppStrings {
       'sendSurvey': 'Send Survey',
       'surveySent': 'Survey sent successfully. Thank you!',
       'rateAllAspects': 'Please rate all aspects',
+
+      //ENVIO DE DATOS
+      'Thanks' : 'Thank you',
+      'Error': 'Error',
     },
   };
 }
