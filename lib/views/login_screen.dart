@@ -15,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static const Color primaryOrange = Color(0xFFFF6B35);
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _pwdController = TextEditingController();
@@ -175,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: primaryOrange),
+                          borderSide: BorderSide(color: primaryOrange),
                         ),
                         prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
                       ),

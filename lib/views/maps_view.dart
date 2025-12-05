@@ -4,6 +4,7 @@ import 'package:geovoy_app/services/ResponseServ.dart';
 import 'package:geovoy_app/views/login_screen.dart';
 import 'package:geovoy_app/views/widgets/BuildImgWidget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import '../services/UserSession.dart';
 import 'notifications_view.dart';
 import 'profile_view.dart';
@@ -42,24 +43,39 @@ class _MapsViewState extends State<MapsView> {
   bool _isMapMenuExpanded = false;
   bool _isInfoExpanded = false;
   
+  // Missing properties
+  RouteData? _currentSelectedRoute;
+  Set<Marker> markers = {};
+  Set<Polyline> polylines = {};
+  
   static const Color primaryOrange = Color(0xFFFF6B35);
+
+  // Listener for route changes
+  void _onRouteViewModelChanged() {
+    // Handle route view model changes
+    setState(() {
+      // Update UI when routes change
+    });
+  }
+
 
   @override
   void initState() {
     super.initState();
+    // TODO: Implement route fetching when RouteViewModel is fully set up
     // Fetch routes when view loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = context.read<RouteViewModel>();
-      viewModel.fetchRoutes();
-      viewModel.addListener(_onRouteViewModelChanged);
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   final viewModel = context.read<RouteViewModel>();
+    //   viewModel.fetchRoutes();
+    //   viewModel.addListener(_onRouteViewModelChanged);
+    // });
   }
 
   @override
   void dispose() {
-    try {
-      context.read<RouteViewModel>().removeListener(_onRouteViewModelChanged);
-    } catch (_) {}
+    // try {
+    //   context.read<RouteViewModel>().removeListener(_onRouteViewModelChanged);
+    // } catch (_) {}
     super.dispose();
   }
 
@@ -778,6 +794,69 @@ class _MapsViewState extends State<MapsView> {
       ),
     );
   }
+
+  void _showRouteSelectionSheet(BuildContext context) {
+    // Show a simple route selection sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.grey[200]!,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      AppStrings.get('selectRoute'),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      color: Colors.grey[600],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'Selecciona una ruta',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
   Future<void> moveCamera(double lat, double lng) async {
     final GoogleMapController controller = await _controller.future;
