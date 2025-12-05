@@ -21,6 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _pwdController = TextEditingController();
   final session = UserSession();
 
+  bool _obscurePassword = true;
+
   void _showLanguageSelectionSheet() {
     showModalBottomSheet(
       context: context,
@@ -351,7 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const SizedBox(height: 8),
                                   TextField(
                                     controller: _pwdController,
-                                    obscureText: true,
+                                    obscureText: _obscurePassword,
                                     autocorrect: false,
                                     onChanged: vm.setPassword,
                                     decoration: InputDecoration(
@@ -373,6 +375,19 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       ),
                                       contentPadding: EdgeInsets.all(isTabletOrDesktop ? 16 : 12),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscurePassword
+                                              ? Icons.visibility_off
+                                              : Icons.visibility,
+                                          color: Colors.grey,
+                                        ),
+                                        onPressed: () {
+                                          setState(() {
+                                            _obscurePassword = !_obscurePassword;
+                                          });
+                                        },
+                                      ),
                                     ),
                                   ),
                                   SizedBox(height: isTabletOrDesktop ? 25 : 20),
