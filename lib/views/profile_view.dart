@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geovoy_app/services/UserSession.dart';
+import 'package:geovoy_app/views/widgets/BuildQrProfileWidget.dart';
 import '../utils/app_strings.dart';
 
 class ProfileView extends StatefulWidget {
@@ -11,10 +13,14 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   static const Color primaryOrange = Color(0xFFFF6B35);
 
+  final session = UserSession();
+
   // Datos del usuario (temporales)
-  final String userName = 'User Name';
-  final String userEmail = 'user@email.com';
-  final String supportPhone = '+52 123 456 7890';
+  late final String? userName = session.getUserData()?.nombre;//'User Name';
+  late final String? userEmail = session.getUserData()?.email; //'user@email.com';
+  late final String? supportPhone = session.getCompanyData()?.telefonos;//'+52 123 456 7890';
+
+  late String? qr_text = session.getUserData()?.idCli.toString();
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +66,7 @@ class _ProfileViewState extends State<ProfileView> {
               // Campo Email
               _buildInfoCard(
                 icon: Icons.email_outlined,
-                label: 'Email', // Keeping 'Email' as it is common, or should I use AppStrings.get('emailLabel')? 'emailLabel' is 'Correo Electrónico'. Let's use 'Email' hardcoded or add to AppStrings. I'll leave 'Email' for now or use 'emailLabel'. Let's use 'emailLabel' for consistency.
+                label: 'Email',
                 value: userEmail,
               ),
               const SizedBox(height: 16),
@@ -107,11 +113,7 @@ class _ProfileViewState extends State<ProfileView> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.qr_code_2,
-                        size: 100,
-                        color: Colors.grey[300],
-                      ),
+                      buildSafeQRCode( qr_text! ),
                       const SizedBox(height: 16),
                       Text(
                         AppStrings.get('qrCode'),
@@ -121,14 +123,7 @@ class _ProfileViewState extends State<ProfileView> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        AppStrings.get('comingSoon'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[400],
-                        ),
-                      ),
+
                     ],
                   ),
                 ),
@@ -193,7 +188,7 @@ class _ProfileViewState extends State<ProfileView> {
   Widget _buildInfoCard({
     required IconData icon,
     required String label,
-    required String value,
+    required String? value,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -243,7 +238,7 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  value,
+                  value!,
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.black87,

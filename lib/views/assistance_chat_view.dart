@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:geovoy_app/models/login_response.dart';
+import 'package:geovoy_app/services/ResponseServ.dart';
+import 'package:geovoy_app/services/UserSession.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import '../utils/app_strings.dart';
 
 class AssistanceChatView extends StatefulWidget {
@@ -11,6 +16,8 @@ class AssistanceChatView extends StatefulWidget {
 class _AssistanceChatViewState extends State<AssistanceChatView> {
   static const Color primaryOrange = Color(0xFFFF6B35);
   final ScrollController _scrollController = ScrollController();
+
+  final UserSession session = UserSession();
   
   // Lista de mensajes en el chat
   final List<ChatMessage> _messages = [];
@@ -48,6 +55,9 @@ class _AssistanceChatViewState extends State<AssistanceChatView> {
 
     
     Future.delayed(const Duration(milliseconds: 600), () {
+
+      Empresa? company = session.getCompanyData();
+
       switch (option.id) {
         case 'routes':
           _addBotMessage('Para ver las rutas, ve a la pantalla principal "Mapa".\n\nPuedes seleccionar:\n• Frecuentes: Tus rutas habituales\n• En Tiempo: Rutas activas ahora\n• Todas: Lista completa');
@@ -66,8 +76,15 @@ class _AssistanceChatViewState extends State<AssistanceChatView> {
           _showContactOptions();
           break;
         case 'call_now':
-          _addBotMessage('Puedes llamar al siguiente número:\n\n📞 55-1234-5678\n\nHorario de atención: 8:00 AM - 6:00 PM');
+
+          if(company!.telefonos.trim().isEmpty){
+            _addBotMessage('No hay número de teléfono disponible.');
+            _showReturnOptions();
+            return;
+          }
+          _addBotMessage('Llamando al siguiente número:\n\n📞 ${company?.telefonos}');
           _showReturnOptions();
+          makePhoneCall( company!.telefonos.toString() );
           break;
         case 'back':
           _addBotMessage('¿Hay algo más en lo que pueda ayudarte?');
@@ -89,13 +106,14 @@ class _AssistanceChatViewState extends State<AssistanceChatView> {
   void _showContactOptions() {
     setState(() {
       _currentOptions = [
-        ChatOption(id: 'call_now', text: 'Ver número de teléfono'),
+        ChatOption(id: 'call_now', text: 'Llamar al número de asistencia'),
         ChatOption(id: 'back', text: 'Volver al inicio'),
       ];
     });
   }
 
   void _addBotMessage(String text) {
+
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: false));
     });
@@ -216,6 +234,29 @@ class _AssistanceChatViewState extends State<AssistanceChatView> {
       ),
     );
   }
+
+
+
+  Future<void> makePhoneCall(String phoneNumber) async {
+    // Limpia espacios o caracteres no numéricos innecesarios (opcional)
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+
+    final Uri uri = Uri.parse('tel:$cleanNumber');
+
+    try {
+      // Omitir canLaunchUrlString puede ayudar si falla la verificación
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication, // fuerza abrir app externa
+      );
+    } catch (e) {
+      print(e);
+      debugPrint('Error al lanzar llamada: $e');
+      // Manejo adicional si quieres — mostrar alerta, etc.
+    }
+  }
+
+
 }
 
 class ChatMessage {
