@@ -70,7 +70,7 @@ class AuthService {
     try {
       final response = await _apiService.postWithHeaders(
         endpoint: ApiConstants.sesionGps,
-        baseUrl: ApiConstants.baseUrlOptions, // Usa URL Options/Rastreo
+        baseUrl: ApiConstants.baseUrl2, // Usa URL Options/Rastreo
         body: {
           'email': ApiConstants.gpsEmail,
           'password': ApiConstants.gpsPassword,

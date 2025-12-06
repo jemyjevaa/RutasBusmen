@@ -2,6 +2,11 @@ import 'package:flutter/foundation.dart';
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
 import '../services/route_api_service.dart';
+import '../services/tracking_service.dart';
+import '../services/google_directions_service.dart';
+import '../models/unit_location_model.dart';
+import '../models/route_path_point.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart'; // For LatLng
 
 /// ViewModel for managing route data and state
 class RouteViewModel extends ChangeNotifier {
@@ -41,6 +46,12 @@ class RouteViewModel extends ChangeNotifier {
       if (response.respuesta) {
         _allRoutes = response.data;
         _errorMessage = null;
+        
+        // Initialize tracking if not already done
+        if (!_isTrackingInitialized) {
+          _initTracking();
+          _isTrackingInitialized = true;
+        }
       } else {
         _errorMessage = 'No se pudieron cargar las rutas';
       }
@@ -116,11 +127,34 @@ class RouteViewModel extends ChangeNotifier {
   List<RouteStop> get routeStops => _routeStops;
   bool get isLoadingStops => _isLoadingStops;
 
+  // --- Route Path Logic ---
+  final GoogleDirectionsService _directionsService = GoogleDirectionsService();
+  List<RoutePathPoint> _routePath = [];
+  List<RoutePathPoint> get routePath => _routePath;
+
+  // Deprecated: logic moved to fetchStopsForRoute
+  Future<void> fetchRoutePath(String claveRuta) async {
+    // No-op or manual trigger if needed
+  }
+
+  Future<void> _fetchPolylineFromGoogle() async {
+    if (_routeStops.isEmpty) return;
+    
+    try {
+      final points = await _directionsService.getRoutePolyline(_routeStops);
+      _routePath = points.map((p) => RoutePathPoint(latitude: p.latitude, longitude: p.longitude)).toList();
+      notifyListeners();
+    } catch (e) {
+      print('Error fetching Google Polyline: $e');
+    }
+  }
+
   /// Fetch stops for a specific route
   Future<void> fetchStopsForRoute(String claveRuta) async {
     print('Fetching stops for route: $claveRuta'); // DEBUG LOG
     _isLoadingStops = true;
     _routeStops = []; // Clear previous stops
+    _routePath = []; // Clear previous path
     notifyListeners();
 
     try {
@@ -131,6 +165,10 @@ class RouteViewModel extends ChangeNotifier {
         print('Loaded ${_routeStops.length} stops'); // DEBUG LOG
         // Sort by order if available
         _routeStops.sort((a, b) => (a.orden ?? 0).compareTo(b.orden ?? 0));
+        
+        // Fetch polyline from Google Directions
+        await _fetchPolylineFromGoogle();
+        
       } else {
         print('No stops found for route $claveRuta (respuesta: false)');
       }
@@ -146,5 +184,58 @@ class RouteViewModel extends ChangeNotifier {
   void clearRouteStops() {
     _routeStops = [];
     notifyListeners();
+  }
+
+
+  // --- Tracking Logic ---
+  final TrackingService _trackingService = TrackingService();
+  List<UnitLocation> _allUnits = [];
+  String? _selectedRouteKey; // Track currently selected route
+  bool _isTrackingInitialized = false;
+
+  /// Get the single active unit for the currently selected route
+  /// Returns only ONE unit - the one actively doing the route
+  List<UnitLocation> get visibleUnits {
+    if (_selectedRouteKey == null || _allUnits.isEmpty) return [];
+    
+    // Return only the first unit (the active one doing the route)
+    // If there are multiple units, we show only the first one
+    return [_allUnits.first];
+  }
+
+  void _initTracking() {
+    _trackingService.initialize();
+    _trackingService.locationStream.listen((units) {
+      _allUnits = units;
+      notifyListeners();
+    });
+  }
+
+  /// Fetch units for a specific route
+  Future<void> fetchUnitsForRoute(String claveRuta) async {
+    print('🚌 Fetching units for route: $claveRuta');
+    _selectedRouteKey = claveRuta;
+    
+    // Initialize tracking if not already done
+    if (!_isTrackingInitialized) {
+      _initTracking();
+      _isTrackingInitialized = true;
+    }
+    
+    // Fetch units for this specific route
+    await _trackingService.fetchUnitsForRoute(claveRuta);
+  }
+
+  /// Clear selected route and units
+  void clearSelectedRoute() {
+    _selectedRouteKey = null;
+    _allUnits = [];
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _trackingService.dispose();
+    super.dispose();
   }
 }
