@@ -182,3 +182,55 @@ class Empresa {
 }
 
 // endregion Login
+
+// region notification
+class ApiResNotification {
+  final bool respuesta;
+  final List<NotificationItem> data;
+
+  ApiResNotification({
+    required this.respuesta,
+    required this.data,
+  });
+
+  // Si tu API te devuelve un JSON, puedes usar un factory constructor:
+  factory ApiResNotification.fromJson(Map<String, dynamic> json) {
+    return ApiResNotification(
+      respuesta: json['respuesta'] as bool,
+      data: List<NotificationItem>.from(json['data'] as List<dynamic>),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'respuesta': respuesta,
+      'data': data,
+    };
+  }
+}
+class NotificationItem {
+  final String title;
+  final String message;
+  final String time;
+  final String id;  // o lo que identifique
+  bool isRead;
+
+  NotificationItem({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.time,
+    this.isRead = false,
+  });
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    return NotificationItem(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      message: json['message'] as String,
+      time: json['time'] as String,
+      isRead: json['isRead'] as bool? ?? false,
+    );
+  }
+}
+// endregion notification
