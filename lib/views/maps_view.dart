@@ -64,53 +64,76 @@ class _MapsViewState extends State<MapsView> {
   
   static const Color primaryOrange = Color(0xFFFF6B35);
   
-  bool _hasInitializedCamera = false; // Track if camera was already positioned
+  bool _hasInitializedCamera = false; // Track if camera was initially positioned for the route
+  bool _wasFollowingUnit = false; // Track if we were previously following a unit
 
   // Listener for route changes
   void _onRouteViewModelChanged() {
     final viewModel = context.read<RouteViewModel>();
     
-    // Follow the unit if available
+    // Case 1: Unit is available - Follow it
     if (viewModel.visibleUnits.isNotEmpty) {
       final unit = viewModel.visibleUnits.first;
-      _controller.future.then((controller) {
-        try {
-          // Move camera to follow the unit
-          controller.animateCamera(
-            CameraUpdate.newLatLngZoom(
-              LatLng(unit.latitude, unit.longitude),
-              16.0, // Zoom level for following unit
-            ),
-          );
-        } catch (e) {
-          print('Error moving camera to unit: $e');
-        }
-      });
-    }
-    // Only fit route bounds on initial load (when stops are first loaded)
-    else if (!_hasInitializedCamera && 
-             !viewModel.isLoadingStops && 
-             viewModel.routeStops.isNotEmpty) {
-      final points = viewModel.routeStops
-          .map((stop) => LatLng(stop.latitud, stop.longitud))
-          .toList();
       
-      if (points.isNotEmpty) {
+      // Check for valid coordinates
+      if (unit.latitude != 0 && unit.longitude != 0) {
         _controller.future.then((controller) {
           try {
-            final bounds = _createBounds(points);
-            controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
-            _hasInitializedCamera = true;
+            // Move camera to follow the unit
+            // Use newLatLng to allow user to adjust zoom, or newLatLngZoom to force it?
+            // User requested "enfocarse automáticamente", so we ensure visibility.
+            controller.animateCamera(
+              CameraUpdate.newLatLngZoom(
+                LatLng(unit.latitude, unit.longitude),
+                16.5, // Slightly closer for better view
+              ),
+            );
           } catch (e) {
-            print('Error moving camera: $e');
+            print('Error moving camera to unit: $e');
           }
         });
+        _wasFollowingUnit = true;
+        _hasInitializedCamera = true; // Mark as initialized so we don't jump back to bounds unnecessarily
+      }
+    }
+    // Case 2: No unit available (or lost signal)
+    else {
+      // If we were following a unit and lost it, OR if this is the initial load of stops
+      // We fit the route bounds to show the full context
+      if ((_wasFollowingUnit || !_hasInitializedCamera) && 
+          !viewModel.isLoadingStops && 
+          viewModel.routeStops.isNotEmpty) {
+        
+        _fitRouteBounds(viewModel);
+        _wasFollowingUnit = false;
+        _hasInitializedCamera = true;
       }
     }
     
     setState(() {
       // Update UI when routes change
     });
+  }
+
+  void _fitRouteBounds(RouteViewModel viewModel) {
+    // Determine points to include in bounds (stops + path)
+    List<LatLng> points = [];
+    if (viewModel.routePath.isNotEmpty) {
+       points = viewModel.routePath.map((p) => LatLng(p.latitude, p.longitude)).toList();
+    } else {
+       points = viewModel.routeStops.map((stop) => LatLng(stop.latitud, stop.longitud)).toList();
+    }
+    
+    if (points.isNotEmpty) {
+      _controller.future.then((controller) {
+        try {
+          final bounds = _createBounds(points);
+          controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+        } catch (e) {
+          print('Error fitting bounds: $e');
+        }
+      });
+    }
   }
 
 
@@ -1106,6 +1129,7 @@ class _MapsViewState extends State<MapsView> {
                             setState(() {
                               _currentSelectedRoute = route;
                               _hasInitializedCamera = false; // Reset for new route
+                              _wasFollowingUnit = false; // Reset
                             });
                             
                             final routeViewModel = context.read<RouteViewModel>();
@@ -1272,6 +1296,7 @@ class _MapsViewState extends State<MapsView> {
                 setState(() {
                   _currentSelectedRoute = route;
                   _hasInitializedCamera = false; // Reset for new route
+                  _wasFollowingUnit = false; // Reset
                 });
                 
                 final routeViewModel = context.read<RouteViewModel>();
