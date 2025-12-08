@@ -7,6 +7,8 @@ class RequestServ {
 
   static const String urlvalidaUsuarioEmpresa = "api/validaUsuarioEmpresa";
 
+  static const String urlNotification = "api/notificacionporempresa";
+
   // Singleton pattern
   RequestServ._privateConstructor();
   static final RequestServ instance = RequestServ._privateConstructor();

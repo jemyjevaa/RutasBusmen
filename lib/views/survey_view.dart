@@ -1,26 +1,496 @@
 import 'package:flutter/material.dart';
+import 'package:geovoy_app/viewModel/survey/survey_viewmodal.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_strings.dart';
 import '../widgets/route_selector.dart';
 import '../models/route_model.dart';
 import '../widgets/animated_result_dialog.dart';
 
-class SurveyView extends StatefulWidget {
+class SurveyView extends StatelessWidget{
+
   const SurveyView({super.key});
 
   @override
-  State<SurveyView> createState() => _SurveyViewState();
+  Widget build( BuildContext context ){
+    return ChangeNotifierProvider(
+      create: (_) => SurveyViewModel(),
+      child: SurveyViewForm() ,
+    );
+  }
+
 }
 
+class SurveyViewForm extends StatelessWidget{
+
+  static const Color primaryOrange = Color(0xFFFF6B35);
+  const SurveyViewForm({super.key});
+
+  @override
+  Widget build(BuildContext context){
+    final vm = Provider.of<SurveyViewModel>(context);
+
+    return Scaffold(
+        appBar: AppBar(
+          title: Text(AppStrings.get('survey')),
+          backgroundColor: primaryOrange,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          titleTextStyle: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: vm.formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: primaryOrange.withOpacity(0.1),
+                        shape: BoxShape.circle
+                      ),
+                      child: const Icon(
+                        Icons.poll,
+                        size: 60,
+                        color: primaryOrange
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Text(
+                      AppStrings.get('satisfactionSurvey'),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      AppStrings.get('yourOpinionHelps'),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  //  region Campo Usuario Widget
+                  _buildLabel(AppStrings.get('userLabel')),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: vm.nameController,
+                    decoration: _buildInputDecoration(
+                      hint: AppStrings.get('userLabel'),
+                      icon: Icons.person_outline,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return AppStrings.get('userError');
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  //  endregion Campo Usuario Widget
+
+                  // region Campo Email Widget
+                  _buildLabel(AppStrings.get('emailLabel')),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: vm.emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: _buildInputDecoration(
+                      hint: AppStrings.get('emailHint'),
+                      icon: Icons.email_outlined,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return AppStrings.get('emailError');
+                      }
+                      if (!value.contains('@')) {
+                        return AppStrings.get('emailInvalid');
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  // endregion Campo Email Widget
+
+                  // region Select Route
+                  _buildLabel(AppStrings.get('routeLabel')),
+                  const SizedBox(height: 8),
+                  RouteSelector(
+                    selectedRoute: vm.selectedRoute,
+                    onRouteSelected: vm.setRoute,
+                    primaryColor: primaryOrange,
+                  ),
+                  const SizedBox(height: 20),
+                  // endregion Select Route
+
+                  // region Selector de Horario Widget
+                  _buildLabel(AppStrings.get('scheduleLabel')),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: vm.shiftController,
+                    decoration: _buildInputDecoration(
+                      hint: AppStrings.get('scheduleLabel'),
+                      icon: Icons.access_time,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return AppStrings.get('scheduleLabel');
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                  // endregion Selector de Horario Widget
+
+                  // region selector Unit Widget
+                  _buildLabel(AppStrings.get('unitLabel')),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: vm.unitController,
+                    decoration: _buildInputDecoration(
+                      hint: AppStrings.get('unitLabel'),
+                      icon: Icons.bus_alert,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return AppStrings.get('unitLabel');
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                  // endregion selector Unit Widget
+
+                  // region Sección de Calificaciones
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: primaryOrange.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: primaryOrange.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.star, color: primaryOrange, size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              AppStrings.get('rateService'),
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          AppStrings.get('ratingScale'),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // 1. Limpieza de las unidades
+                        _buildRatingItem(
+                          title: AppStrings.get('unitCleanliness'),
+                          icon: Icons.cleaning_services,
+                          rating: vm.unitClean,
+                          onRatingChanged: (rating) {
+                            vm.setUnitClean(rating);
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
+                        // 2. Actitud del operador
+                        _buildRatingItem(
+                          title: AppStrings.get('operatorAttitude'),
+                          icon: Icons.emoji_emotions,
+                          rating: vm.operator,
+                          onRatingChanged: (rating) {
+                            vm.setOperator(rating);
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
+                        // 3. Forma de conducir del operador
+                        _buildRatingItem(
+                          title: AppStrings.get('operatorDriving'),
+                          icon: Icons.drive_eta,
+                          rating: vm.operatorDriver,
+                          onRatingChanged: (rating) {
+                            vm.setOperatorDriver(rating);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  // endregion Sección de Calificaciones
+
+                  // region send Form
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => vm.submitForm(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryOrange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.send, size: 20),
+                          SizedBox(width: 12),
+                          Text(
+                            AppStrings.get('sendSurvey'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // endregion send Form
+
+                ],
+              ),
+            ),
+          )
+        )
+    );
+
+  }
+
+  // region Funtion
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.black87,
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration({
+    required String hint,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey[400]),
+      prefixIcon: Icon(icon, color: primaryOrange),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryOrange, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String? value,
+    required String hint,
+    required IconData icon,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: primaryOrange),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.grey[400]),
+        ),
+        items: items.map((String item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Text(item),
+          );
+        }).toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildRatingItem({
+    required String title,
+    required IconData icon,
+    required int rating,
+    required Function(int) onRatingChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: primaryOrange, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(5, (index) {
+            final starRating = index + 1;
+            return GestureDetector(
+              onTap: () => onRatingChanged(starRating),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: rating >= starRating
+                      ? primaryOrange
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: rating >= starRating
+                        ? primaryOrange
+                        : Colors.grey[300]!,
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '$starRating',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: rating >= starRating
+                          ? Colors.white
+                          : Colors.grey[400],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              AppStrings.get('bad'),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            Text(
+              AppStrings.get('excellent'),
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+  // endregion Funtion
+}
+
+
+// region Controller
+// class SurveyView extends StatefulWidget {
+//   const SurveyView({super.key});
+//
+//   @override
+//   State<SurveyView> createState() => _SurveyViewState();
+// }
+/*
 class _SurveyViewState extends State<SurveyView> {
   static const Color primaryOrange = Color(0xFFFF6B35);
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  
+
   RouteData? _selectedRoute;
   String? _selectedSchedule;
-  
+
   // Calificaciones (1 = Malo, 5 = Excelente)
   int _cleanlinessRating = 0;
   int _attitudeRating = 0;
@@ -516,3 +986,5 @@ class _SurveyViewState extends State<SurveyView> {
     );
   }
 }
+ */
+// endregion Controller

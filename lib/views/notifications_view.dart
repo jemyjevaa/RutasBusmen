@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../viewModel/notification/NotificationViewModel.dart';
 
 class NotificationsView extends StatefulWidget {
   const NotificationsView({super.key});
@@ -11,75 +14,143 @@ class _NotificationsViewState extends State<NotificationsView> {
   static const Color primaryOrange = Color(0xFFFF6B35);
 
   // Lista de notificaciones de ejemplo
-  final List<Map<String, dynamic>> _notifications = [
-    {
-      'title': 'Ruta actualizada',
-      'message': 'La ruta ALBROOK ha cambiado su horario',
-      'time': 'Hace 5 min',
-      'icon': Icons.directions_bus,
-      'isRead': false,
-    },
-    {
-      'title': 'Parada cercana',
-      'message': 'Estás a 200m de tu parada',
-      'time': 'Hace 15 min',
-      'icon': Icons.location_on,
-      'isRead': false,
-    },
-    {
-      'title': 'Retraso en servicio',
-      'message': 'El autobús PANAMA OESTE tiene un retraso de 10 minutos',
-      'time': 'Hace 1 hora',
-      'icon': Icons.warning,
-      'isRead': true,
-    },
-    {
-      'title': 'Nueva ruta disponible',
-      'message': 'Ruta ALBROOK para llegar a tu destino',
-      'time': 'Hace 2 horas',
-      'icon': Icons.add_road,
-      'isRead': true,
-    },
-  ];
+  List<Map<String, dynamic>> _notifications = [];
+  bool _isLoading = true;
+  // final List<Map<String, dynamic>> _notifications = [
+  //   {
+  //     'title': 'Ruta actualizada',
+  //     'message': 'La ruta ALBROOK ha cambiado su horario',
+  //     'time': 'Hace 5 min',
+  //     'icon': Icons.directions_bus,
+  //     'isRead': false,
+  //   },
+  //   {
+  //     'title': 'Parada cercana',
+  //     'message': 'Estás a 200m de tu parada',
+  //     'time': 'Hace 15 min',
+  //     'icon': Icons.location_on,
+  //     'isRead': false,
+  //   },
+  //   {
+  //     'title': 'Retraso en servicio',
+  //     'message': 'El autobús PANAMA OESTE tiene un retraso de 10 minutos',
+  //     'time': 'Hace 1 hora',
+  //     'icon': Icons.warning,
+  //     'isRead': true,
+  //   },
+  //   {
+  //     'title': 'Nueva ruta disponible',
+  //     'message': 'Ruta ALBROOK para llegar a tu destino',
+  //     'time': 'Hace 2 horas',
+  //     'icon': Icons.add_road,
+  //     'isRead': true,
+  //   },
+  // ];
 
   @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: const Text('Notificaciones'),
+  //       backgroundColor: Colors.white,
+  //       elevation: 0,
+  //       iconTheme: const IconThemeData(color: Colors.black),
+  //       titleTextStyle: const TextStyle(
+  //         color: Colors.black,
+  //         fontSize: 20,
+  //         fontWeight: FontWeight.bold,
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () {
+  //             setState(() {
+  //               for (var notification in _notifications) {
+  //                 notification['isRead'] = true;
+  //               }
+  //             });
+  //           },
+  //           child: const Text(
+  //             'Marcar todas',
+  //             style: TextStyle(color: primaryOrange),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //     body: _notifications.isEmpty
+  //         ? _buildEmptyState()
+  //         : ListView.builder(
+  //             padding: const EdgeInsets.all(16),
+  //             itemCount: _notifications.length,
+  //             itemBuilder: (context, index) {
+  //               return _buildNotificationCard(_notifications[index], index);
+  //             },
+  //           ),
+  //   );
+  // }
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notificaciones'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        titleTextStyle: const TextStyle(
-          color: Colors.black,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                for (var notification in _notifications) {
-                  notification['isRead'] = true;
-                }
-              });
-            },
-            child: const Text(
-              'Marcar todas',
-              style: TextStyle(color: primaryOrange),
+    return ChangeNotifierProvider(
+      create: (_) {
+        final vm = NotificationsViewModel();
+        vm.loadNotifications();  // carga los datos cuando se crea el VM
+        return vm;
+      },
+      child: Consumer<NotificationsViewModel>(
+        builder: (context, vm, child) {
+          if (vm.isLoading) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (vm.error != null) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Notificaciones')),
+              body: Center(child: Text('Error: ${vm.error}')),
+            );
+          }
+
+          final notifications = vm.notifications;
+
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Notificaciones'),
+              backgroundColor: Colors.white,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.black),
+              titleTextStyle: const TextStyle(
+                color: Colors.black,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: vm.markAllAsRead, // marca todas como leídas
+                  child: const Text(
+                    'Marcar todas',
+                    style: TextStyle(color: Color(0xFFFF6B35)),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-      body: _notifications.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
+            body: notifications.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _notifications.length,
+              itemCount: notifications.length,
               itemBuilder: (context, index) {
-                return _buildNotificationCard(_notifications[index], index);
+                final n = notifications[index];
+                return Dismissible(
+                  key: Key('notification_${n.id}'),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) => vm.removeNotificationAt(index),
+                  child: _buildNotificationCard(n as Map<String, dynamic>, index),
+                );
               },
             ),
+          );
+        },
+      ),
     );
   }
 
