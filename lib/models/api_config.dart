@@ -1,9 +1,13 @@
 /// API Configuration for route requests
 /// Contains default values for API parameters
 class ApiConfig {
-  // Default API parameters
-  static const String empresa = 'lyondellbasell';
-  static const int idUsuario = 11;
+  // Dynamic API parameters (set after login)
+  static String? _empresa;
+  static int? _idUsuario;
+  
+  // Default fallback values
+  static const String defaultEmpresa = 'lyondellbasell';
+  static const int defaultIdUsuario = 11;
   static const String tipoRuta = 'EXT';
   static const String tipoUsuario = 'adm';
   
@@ -11,6 +15,30 @@ class ApiConfig {
   static const String baseUrl = 'https://rutasbusmen.geovoy.com/api';
   static const String unidadAsignadaRutaEndpoint = '/unidadAsignadaRuta';
   static const String paradasRutaEndpoint = '/paradasRuta';
+  static const String unidadDeRuta = '/unidadDeRuta';
+  static const String infoRutaEndpoint = '/ruta';
+  
+  /// Set the current company (should be called after login)
+  static void setEmpresa(String empresa) {
+    _empresa = empresa;
+  }
+  
+  /// Set the current user ID (should be called after login)
+  static void setIdUsuario(int idUsuario) {
+    _idUsuario = idUsuario;
+  }
+  
+  /// Get the current empresa (uses set value or default)
+  static String get empresa => _empresa ?? defaultEmpresa;
+  
+  /// Get the current user ID (uses set value or default)
+  static int get idUsuario => _idUsuario ?? defaultIdUsuario;
+  
+  /// Clear configuration (for logout)
+  static void clear() {
+    _empresa = null;
+    _idUsuario = null;
+  }
   
   /// Get the request body for fetching routes
   static Map<String, dynamic> getRouteRequestBody() {

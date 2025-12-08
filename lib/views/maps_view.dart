@@ -18,6 +18,8 @@ import '../utils/app_strings.dart';
 import '../viewmodels/route_viewmodel.dart';
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
+import '../models/api_config.dart';
+
 
 class MapsView extends StatefulWidget {
   const MapsView({super.key});
@@ -43,39 +45,130 @@ class _MapsViewState extends State<MapsView> {
   bool _isMapMenuExpanded = false;
   bool _isInfoExpanded = false;
   
+  
   // Missing properties
   RouteData? _currentSelectedRoute;
   Set<Marker> markers = {};
   Set<Polyline> polylines = {};
+  int _selectedRouteTab = 0; // 0: Frecuentes, 1: En Tiempo, 2: Todas
+  BitmapDescriptor? _busIcon;
+
+  Future<void> _loadBusIcon() async {
+    _busIcon = await BitmapDescriptor.fromAssetImage(
+      const ImageConfiguration(size: Size(48, 48)),
+      'assets/images/icons/bus_Motion_True.png',
+    );
+    setState(() {});
+  }
+  
   
   static const Color primaryOrange = Color(0xFFFF6B35);
+  
+  bool _hasInitializedCamera = false; // Track if camera was initially positioned for the route
+  bool _wasFollowingUnit = false; // Track if we were previously following a unit
 
   // Listener for route changes
   void _onRouteViewModelChanged() {
-    // Handle route view model changes
+    final viewModel = context.read<RouteViewModel>();
+    
+    // Case 1: Unit is available - Follow it
+    if (viewModel.visibleUnits.isNotEmpty) {
+      final unit = viewModel.visibleUnits.first;
+      
+      // Check for valid coordinates
+      if (unit.latitude != 0 && unit.longitude != 0) {
+        _controller.future.then((controller) {
+          try {
+            // Move camera to follow the unit
+            // Use newLatLng to allow user to adjust zoom, or newLatLngZoom to force it?
+            // User requested "enfocarse automáticamente", so we ensure visibility.
+            controller.animateCamera(
+              CameraUpdate.newLatLngZoom(
+                LatLng(unit.latitude, unit.longitude),
+                16.5, // Slightly closer for better view
+              ),
+            );
+          } catch (e) {
+            print('Error moving camera to unit: $e');
+          }
+        });
+        _wasFollowingUnit = true;
+        _hasInitializedCamera = true; // Mark as initialized so we don't jump back to bounds unnecessarily
+      }
+    }
+    // Case 2: No unit available (or lost signal)
+    else {
+      // If we were following a unit and lost it, OR if this is the initial load of stops
+      // We fit the route bounds to show the full context
+      if ((_wasFollowingUnit || !_hasInitializedCamera) && 
+          !viewModel.isLoadingStops && 
+          viewModel.routeStops.isNotEmpty) {
+        
+        _fitRouteBounds(viewModel);
+        _wasFollowingUnit = false;
+        _hasInitializedCamera = true;
+      }
+    }
+    
     setState(() {
       // Update UI when routes change
     });
+  }
+
+  void _fitRouteBounds(RouteViewModel viewModel) {
+    // Determine points to include in bounds (stops + path)
+    List<LatLng> points = [];
+    if (viewModel.routePath.isNotEmpty) {
+       points = viewModel.routePath.map((p) => LatLng(p.latitude, p.longitude)).toList();
+    } else {
+       points = viewModel.routeStops.map((stop) => LatLng(stop.latitud, stop.longitud)).toList();
+    }
+    
+    if (points.isNotEmpty) {
+      _controller.future.then((controller) {
+        try {
+          final bounds = _createBounds(points);
+          controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+        } catch (e) {
+          print('Error fitting bounds: $e');
+        }
+      });
+    }
   }
 
 
   @override
   void initState() {
     super.initState();
-    // TODO: Implement route fetching when RouteViewModel is fully set up
+    _loadBusIcon();
+    
+    // Configure API with company data
+    final company = session.getCompanyData();
+    final user = session.getUserData();
+    
+    if (company != null && company.clave.isNotEmpty) {
+      ApiConfig.setEmpresa(company.clave);
+      print('🏢 Configured API for company: ${company.clave}');
+    }
+    
+    if (user != null) {
+      ApiConfig.setIdUsuario(user.id);
+      print('👤 Configured API for user ID: ${user.id}');
+    }
+    
     // Fetch routes when view loads
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   final viewModel = context.read<RouteViewModel>();
-    //   viewModel.fetchRoutes();
-    //   viewModel.addListener(_onRouteViewModelChanged);
-    // });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = context.read<RouteViewModel>();
+      viewModel.fetchRoutes();
+      viewModel.addListener(_onRouteViewModelChanged);
+    });
   }
 
   @override
   void dispose() {
-    // try {
-    //   context.read<RouteViewModel>().removeListener(_onRouteViewModelChanged);
-    // } catch (_) {}
+    try {
+      context.read<RouteViewModel>().removeListener(_onRouteViewModelChanged);
+    } catch (_) {}
     super.dispose();
   }
 
@@ -94,8 +187,100 @@ class _MapsViewState extends State<MapsView> {
 
     moveCamera(lat, lon);
 
+    // Generate markers and polylines from route stops
+    return Consumer<RouteViewModel>(
+      builder: (context, viewModel, child) {
+        // Clear existing markers and polylines
+        markers.clear();
+        polylines.clear();
+        
+        if (viewModel.routeStops.isNotEmpty || viewModel.routePath.isNotEmpty) {
+          // Use route path (waypoints) if available, otherwise fallback to connecting stops
+          final points = viewModel.routePath.isNotEmpty
+              ? viewModel.routePath.map((p) => LatLng(p.latitude, p.longitude)).toList()
+              : viewModel.routeStops.map((stop) => LatLng(stop.latitud, stop.longitud)).toList();
+          
+          if (points.isNotEmpty) {
+            // Add polyline for the route path
+            polylines.add(
+              Polyline(
+                polylineId: const PolylineId('route_path'),
+                points: points,
+                color: primaryOrange,
+                width: 5,
+              ),
+            );
 
-    return Scaffold(
+            // Add markers only if stops are available
+            if (viewModel.routeStops.isNotEmpty) {
+              // Add start marker (green)
+              final firstStop = viewModel.routeStops.first;
+              markers.add(
+                Marker(
+                  markerId: const MarkerId('start'),
+                  position: LatLng(firstStop.latitud, firstStop.longitud),
+                  infoWindow: InfoWindow(
+                    title: 'Inicio',
+                    snippet: firstStop.nombre ?? 'Primera parada',
+                  ),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                ),
+              );
+
+              // Add end marker (red)
+              final lastStop = viewModel.routeStops.last;
+              markers.add(
+                Marker(
+                  markerId: const MarkerId('end'),
+                  position: LatLng(lastStop.latitud, lastStop.longitud),
+                  infoWindow: InfoWindow(
+                    title: 'Fin',
+                    snippet: lastStop.nombre ?? 'Última parada',
+                  ),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                ),
+              );
+            }
+            
+            // Add intermediate stops (orange)
+            for (var i = 1; i < viewModel.routeStops.length - 1; i++) {
+              final stop = viewModel.routeStops[i];
+              markers.add(
+                Marker(
+                  markerId: MarkerId('stop_$i'),
+                  position: LatLng(stop.latitud, stop.longitud),
+                  infoWindow: InfoWindow(
+                    title: stop.nombre ?? 'Parada ${stop.orden ?? i + 1}',
+                    snippet: 'Toca para más información',
+                  ),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+                ),
+              );
+            }
+          }
+        }
+        
+        // Add unit markers
+        if (_busIcon != null) {
+          for (var unit in viewModel.visibleUnits) {
+            markers.add(
+              Marker(
+                markerId: MarkerId('unit_${unit.id}'),
+                position: LatLng(unit.latitude, unit.longitude),
+                rotation: unit.course ?? 0.0,
+                icon: _busIcon!,
+                infoWindow: InfoWindow(
+                  title: unit.displayName,
+                  snippet: unit.speed != null 
+                      ? 'Velocidad: ${unit.speed!.toStringAsFixed(1)} km/h'
+                      : 'En movimiento',
+                ),
+              ),
+            );
+          }
+        }
+
+        return Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
         child: Column(
@@ -302,15 +487,18 @@ class _MapsViewState extends State<MapsView> {
                     title: AppStrings.get('logout'),
                     iconColor: Colors.red,
                     textColor: Colors.red,
-                    onTap: () {
+                    onTap: () async {
+                      // Clear session and API config
+                      await session.clear();
+                      ApiConfig.clear();
+                      
                       Navigator.pop(context);
-                      Navigator.push(
+                      Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (context) => const LoginScreen(),
                         ),
                       );
-                      // Cerrar sesión
                     },
                   ),
                 ],
@@ -615,6 +803,8 @@ class _MapsViewState extends State<MapsView> {
         ],
       ),
     );
+      },
+    );
   }
   
   Widget _buildFloatingButton({required IconData icon, required VoidCallback onTap}) {
@@ -795,65 +985,868 @@ class _MapsViewState extends State<MapsView> {
     );
   }
 
+  //Ventana de rutas
   void _showRouteSelectionSheet(BuildContext context) {
-    // Show a simple route selection sheet
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.grey[200]!,
-                      width: 1,
-                    ),
+        // Variable local para manejar la navegación interna del sheet
+        RouteData? selectedRouteDetail;
+        String? selectedRouteGroupName;
+
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            return Consumer<RouteViewModel>(
+              builder: (context, viewModel, child) {
+                
+                // Determine title based on state
+                String title = AppStrings.get('selectRoute');
+                if (selectedRouteDetail != null) {
+                  title = selectedRouteDetail!.displayName;
+                } else if (selectedRouteGroupName != null) {
+                  title = selectedRouteGroupName!;
+                }
+
+                return Container(
+                  height: MediaQuery.of(context).size.height * 0.8,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      AppStrings.get('selectRoute'),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                  child: Column(
+                    children: [
+                      // Header dinámico
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: primaryOrange.withOpacity(0.05),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey[200]!,
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                if (selectedRouteDetail != null || selectedRouteGroupName != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: IconButton(
+                                      icon: const Icon(Icons.arrow_back_ios, size: 20),
+                                      onPressed: () {
+                                        setSheetState(() {
+                                          if (selectedRouteDetail != null) {
+                                            if (_selectedRouteTab == 2 && selectedRouteGroupName != null) {
+                                              selectedRouteDetail = null;
+                                            } else {
+                                              selectedRouteDetail = null;
+                                            }
+                                          } else if (selectedRouteGroupName != null) {
+                                            selectedRouteGroupName = null;
+                                          }
+                                        });
+                                      },
+                                      color: primaryOrange,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  ),
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => Navigator.pop(context),
+                              color: Colors.grey[600],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                      color: Colors.grey[600],
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Center(
+
+                      // Contenido dinámico
+                      if (viewModel.isLoading)
+                        const Expanded(
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: primaryOrange,
+                            ),
+                          ),
+                        )
+                      else if (viewModel.errorMessage != null)
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  viewModel.errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () => viewModel.refreshRoutes(),
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Reintentar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryOrange,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (selectedRouteDetail != null)
+                        Expanded(
+                          child: _buildRouteDetailView(selectedRouteDetail!),
+                        )
+                      else if (selectedRouteGroupName != null)
+                        Expanded(
+                          child: _buildRouteGroupDetailView(viewModel, selectedRouteGroupName!, (route) {
+                            setState(() {
+                              _currentSelectedRoute = route;
+                              _hasInitializedCamera = false; // Reset for new route
+                              _wasFollowingUnit = false; // Reset
+                            });
+                            
+                            final routeViewModel = context.read<RouteViewModel>();
+                            routeViewModel.fetchStopsForRoute(route.claveRuta);
+                            routeViewModel.fetchRoutePath(route.claveRuta);
+                            routeViewModel.fetchUnitsForRoute(route.claveRuta);
+                            
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('${AppStrings.get('selected')} ${route.displayName}')),
+                            );
+                          }),
+                        )
+                      else ...[ 
+                        // Navigation Tabs
+                        Container(
+                          margin: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildTabItem(AppStrings.get('frequent'), 0, setSheetState),
+                              _buildTabItem(AppStrings.get('onTime'), 1, setSheetState),
+                              _buildTabItem(AppStrings.get('all'), 2, setSheetState),
+                            ],
+                          ),
+                        ),
+
+                        // Route List
+                        Expanded(
+                          child: _buildRouteList(viewModel, _selectedRouteTab, (item) {
+                            if (_selectedRouteTab == 2) {
+                              setSheetState(() {
+                                selectedRouteGroupName = item as String;
+                              });
+                            } else {
+                              final route = item as RouteData;
+                              setSheetState(() {
+                                selectedRouteDetail = route;
+                              });
+                            }
+                          }),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRouteDetailView(RouteData route) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: primaryOrange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: primaryOrange.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: primaryOrange),
+                const SizedBox(width: 12),
+                Expanded(
                   child: Text(
-                    'Selecciona una ruta',
+                    'Información de ${route.nombreRuta}',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: Colors.grey[800],
+                      fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          _buildInfoCard(
+            icon: Icons.route,
+            title: 'Clave de Ruta',
+            value: route.claveRuta,
+            color: Colors.blue,
+          ),
+          const SizedBox(height: 12),
+          
+          _buildInfoCard(
+            icon: Icons.wb_sunny,
+            title: 'Turno',
+            value: route.turnoRuta,
+            color: Colors.orange,
+          ),
+          const SizedBox(height: 12),
+          
+          _buildInfoCard(
+            icon: Icons.navigation,
+            title: 'Dirección',
+            value: route.direccionRuta,
+            color: Colors.green,
+          ),
+          const SizedBox(height: 12),
+          
+          _buildInfoCard(
+            icon: Icons.access_time,
+            title: 'Horario',
+            value: route.timeRange,
+            color: Colors.purple,
+          ),
+          const SizedBox(height: 12),
+          
+          _buildInfoCard(
+            icon: Icons.category,
+            title: 'Tipo de Ruta',
+            value: route.tipoRuta,
+            color: Colors.teal,
+          ),
+          const SizedBox(height: 24),
+          
+          Text(
+            'Días de Operación',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: route.diaRuta.map((dia) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: primaryOrange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: primaryOrange.withOpacity(0.3)),
+              ),
+              child: Text(
+                dia,
+                style: const TextStyle(
+                  color: primaryOrange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )).toList(),
+          ),
+          const SizedBox(height: 32),
+          
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _currentSelectedRoute = route;
+                  _hasInitializedCamera = false; // Reset for new route
+                  _wasFollowingUnit = false; // Reset
+                });
+                
+                final routeViewModel = context.read<RouteViewModel>();
+                routeViewModel.fetchStopsForRoute(route.claveRuta);
+                routeViewModel.fetchRoutePath(route.claveRuta);
+                routeViewModel.fetchUnitsForRoute(route.claveRuta);
+                
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${AppStrings.get('selected')} ${route.displayName}')),
+                );
+              },
+              icon: const Icon(Icons.map),
+              label: const Text(
+                'Ver en Mapa',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryOrange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem(String title, int index, StateSetter setSheetState) {
+    final bool isSelected = _selectedRouteTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setSheetState(() {
+            _selectedRouteTab = index;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryOrange : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: primaryOrange.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey[600],
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRouteList(RouteViewModel viewModel, int tabIndex, Function(dynamic) onItemTap) {
+    if (tabIndex == 2) {
+      final routeNames = viewModel.getUniqueRouteNames();
+      
+      if (routeNames.isEmpty) {
+        return _buildEmptyState();
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: routeNames.length,
+        itemBuilder: (context, index) {
+          final name = routeNames[index];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: primaryOrange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.directions_bus, color: primaryOrange),
+              ),
+              title: Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              onTap: () => onItemTap(name),
+            ),
+          );
+        },
+      );
+    }
+
+    final List<RouteData> displayedRoutes = viewModel.getRoutesForTab(tabIndex);
+
+    if (displayedRoutes.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: displayedRoutes.length,
+      itemBuilder: (context, index) {
+        final route = displayedRoutes[index];
+        final isActive = route.isActiveNow();
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: primaryOrange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.directions_bus, color: primaryOrange),
+            ),
+            title: Text(
+              route.displayName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isActive ? Colors.green : Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        isActive ? 'Activa' : 'Fuera de horario',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        route.timeRange,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isActive ? Colors.green.withOpacity(0.1) : Colors.grey[100],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isActive ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                route.turnoRuta,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isActive ? Colors.green : Colors.black87,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            onTap: () => onItemTap(route),
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.route_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No hay rutas disponibles',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDaysCompact(List<String> days) {
+    if (days.isEmpty) return '';
+    
+    final Map<String, String> dayAbbrev = {
+      'Lunes': 'LUN',
+      'Martes': 'MAR',
+      'Miércoles': 'MIÉ',
+      'Miercoles': 'MIÉ',
+      'Jueves': 'JUE',
+      'Viernes': 'VIE',
+      'Sábado': 'SÁB',
+      'Sabado': 'SÁB',
+      'Domingo': 'DOM',
+    };
+
+    final List<String> weekOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    
+    List<String> normalizedDays = days.map((d) {
+      String lower = d.toLowerCase();
+      return weekOrder.firstWhere(
+        (wd) => wd.toLowerCase() == lower,
+        orElse: () => d,
+      );
+    }).toList();
+
+    if (normalizedDays.length >= 2) {
+      List<int> indices = normalizedDays.map((d) => weekOrder.indexOf(d)).where((i) => i != -1).toList();
+      indices.sort();
+      
+      bool consecutive = true;
+      for (int i = 1; i < indices.length; i++) {
+        if (indices[i] != indices[i-1] + 1) {
+          consecutive = false;
+          break;
+        }
+      }
+      
+      if (consecutive && indices.isNotEmpty) {
+        String first = dayAbbrev[weekOrder[indices.first]] ?? normalizedDays.first.substring(0, 3).toUpperCase();
+        String last = dayAbbrev[weekOrder[indices.last]] ?? normalizedDays.last.substring(0, 3).toUpperCase();
+        return '$first-$last';
+      }
+    }
+    
+    return normalizedDays.map((d) => dayAbbrev[d] ?? d.substring(0, 3).toUpperCase()).join(', ');
+  }
+
+  Widget _buildRouteGroupDetailView(RouteViewModel viewModel, String routeName, Function(RouteData) onRouteTap) {
+    final routes = viewModel.getRoutesByName(routeName);
+    final groupedRoutes = viewModel.getRoutesGroupedByDirection(routes);
+    
+    if (routes.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.info_outline, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No se encontraron rutas para $routeName',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...groupedRoutes.entries.map((entry) {
+            final direction = entry.key;
+            final directionRoutes = viewModel.getSortedRoutes(entry.value);
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  direction.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...directionRoutes.map((route) => _buildGroupedRouteItem(route, onRouteTap)),
+                const SizedBox(height: 24),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  LatLngBounds _createBounds(List<LatLng> positions) {
+    final southwestLat = positions.map((p) => p.latitude).reduce((value, element) => value < element ? value : element);
+    final southwestLon = positions.map((p) => p.longitude).reduce((value, element) => value < element ? value : element);
+    final northeastLat = positions.map((p) => p.latitude).reduce((value, element) => value > element ? value : element);
+    final northeastLon = positions.map((p) => p.longitude).reduce((value, element) => value > element ? value : element);
+    return LatLngBounds(
+        southwest: LatLng(southwestLat, southwestLon),
+        northeast: LatLng(northeastLat, northeastLon)
+    );
+  }
+
+  Widget _buildGroupedRouteItem(RouteData route, Function(RouteData) onTap) {
+    return GestureDetector(
+      onTap: () => onTap(route),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 70,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      route.horaInicioRuta,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: primaryOrange,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      route.turnoRuta,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(width: 16),
+              
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      route.nombreRuta,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _formatDaysCompact(route.diaRuta),
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          route.timeRange,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
