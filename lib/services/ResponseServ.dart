@@ -195,48 +195,59 @@ class ApiResNotification {
     required this.data,
   });
 
-  // Si tu API te devuelve un JSON, puedes usar un factory constructor:
   factory ApiResNotification.fromJson(Map<String, dynamic> json) {
     return ApiResNotification(
       respuesta: json['respuesta'] as bool,
-      data: List<NotificationItem>.from(json['data'] as List<dynamic>),
+      data: (json['data'] as List<dynamic>)
+          .map((item) => NotificationItem.fromJson(item))
+          .toList(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'respuesta': respuesta,
-      'data': data,
+      'data': data.map((e) => e.toJson()).toList(),
     };
   }
 }
+
 class NotificationItem {
-  final String title;
-  final String message;
-  final String time;
-  final String id;  // o lo que identifique
+  final String titulo;
+  final String notificacion;
+  final String fecha;
+  final int id;
   bool isRead;
 
   NotificationItem({
     required this.id,
-    required this.title,
-    required this.message,
-    required this.time,
+    required this.titulo,
+    required this.notificacion,
+    required this.fecha,
     this.isRead = false,
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
     return NotificationItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
-      time: json['time'] as String,
+      id: json['id'] as int,
+      titulo: json['titulo'] as String,
+      notificacion: json['notificacion'] as String,
+      fecha: json['fecha'] as String,
       isRead: json['isRead'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'titulo': titulo,
+      'notificacion': notificacion,
+      'fecha': fecha,
+      'isRead': isRead,
+    };
+  }
 }
 // endregion notification
-
 
 // region Assigned Unit Route
 class ApiResUnitAssignedRoute {
