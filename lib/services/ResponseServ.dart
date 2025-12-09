@@ -387,3 +387,29 @@ class SurveyResponse {
 }
 
 // endregion Survey
+
+// region suggestion
+class ApiResSuggestion {
+  final bool respuesta;
+  final String data;
+
+  ApiResSuggestion({
+    required this.respuesta,
+    required this.data,
+  });
+
+  factory ApiResSuggestion.fromJson(Map<String, dynamic> json) {
+    return ApiResSuggestion(
+      respuesta: json['respuesta'],
+      data: json['data'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'respuesta': respuesta,
+      'data': data,
+    };
+  }
+}
+// endregion suggestion

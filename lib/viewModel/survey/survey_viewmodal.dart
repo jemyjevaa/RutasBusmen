@@ -105,20 +105,8 @@ class SurveyViewModel extends ChangeNotifier{
         return;
       }
 
-      final session = UserSession();
-      Empresa? company = session.getCompanyData();
-
-      Object things = {
-        'actitud': validateQuest(operator),
-        'limpieza': validateQuest(unitClean),
-        'empresa': company!.clave,
-        'coduccion': validateQuest(operatorDriver),
-        'correo': emailController.text,
-        'ruta': selectedRoute!.nombreRuta,
-        'turno': shiftController.text,
-        'unidad': unitController.text,
-        'nombre_usuario': nameController.text,
-      };
+      // final session = UserSession();
+      // Empresa? company = session.getCompanyData();
 
       final serv = RequestServ.instance;
       try{
@@ -128,7 +116,7 @@ class SurveyViewModel extends ChangeNotifier{
           params: {
             'actitud': validateQuest(operator),
             'limpieza': validateQuest(unitClean),
-            'empresa': company.clave,
+            'empresa': company?.clave,
             'coduccion': validateQuest(operatorDriver),
             'correo': emailController.text,
             'ruta': selectedRoute!.nombreRuta,
@@ -165,10 +153,10 @@ class SurveyViewModel extends ChangeNotifier{
   }
 
   void clearForm(){
-    nameController.text="";
-    emailController.text="";
-    shiftController.text="";
-    unitController.text="";
+    nameController.clear();
+    emailController.clear();
+    shiftController.clear();
+    unitController.clear();
     selectedRoute = null;
     unitClean = 0;
     operator = 0;

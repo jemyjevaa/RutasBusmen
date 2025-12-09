@@ -399,6 +399,7 @@ class SuggestionsView extends StatelessWidget {
 
 class SuggestionsViewForm extends StatelessWidget {
   const SuggestionsViewForm({super.key});
+  static const Color primaryOrange = Color(0xFFFF6B35);
 
   @override
   Widget build(BuildContext context) {
@@ -466,29 +467,30 @@ class SuggestionsViewForm extends StatelessWidget {
               const SizedBox(height: 20),
 
               // --- Horario ---
-              _buildLabel(AppStrings.get('selectScheduleLabel')),
+              _buildLabel(AppStrings.get('scheduleLabel')),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: vm.selectedSchedule,
-                decoration: _input(
-                  hint: AppStrings.get('selectScheduleHint'),
+              TextFormField(
+                controller: vm.selectedSchedule,
+                readOnly: true,
+                decoration: _buildInputDecoration(
+                  hint: AppStrings.get('scheduleLabel'),
                   icon: Icons.access_time,
                 ),
-                items: vm.schedules
-                    .map((s) => DropdownMenuItem(
-                  value: s,
-                  child: Text(s),
-                ))
-                    .toList(),
-                onChanged: vm.setSchedule,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return AppStrings.get('scheduleLabel');
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
 
               // --- Unidad ---
               _buildLabel(AppStrings.get('unitLabel')),
               const SizedBox(height: 8),
               TextFormField(
                 controller: vm.unitController,
+                readOnly: true,
                 keyboardType: TextInputType.number,
                 decoration: _input(
                   hint: AppStrings.get('unitHint'),
@@ -582,5 +584,40 @@ class SuggestionsViewForm extends StatelessWidget {
       ),
     );
   }
+
+  InputDecoration _buildInputDecoration({
+    required String hint,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey[400]),
+      prefixIcon: Icon(icon, color: primaryOrange),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: primaryOrange, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    );
+  }
+
 }
 

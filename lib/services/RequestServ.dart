@@ -10,6 +10,7 @@ class RequestServ {
   static const String urlNotification = "api/notificacionporempresa";
 
   static const String urlSurvey = "api/encuesta";
+  static const String urlSuggestion = "api/sugerencias";
 
   static const String urlUnitAssignedRoute = "api/unidadDeRuta";
 
