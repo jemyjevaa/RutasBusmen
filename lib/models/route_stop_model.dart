@@ -1,7 +1,7 @@
 /// Model for route stops (points that define the route path)
 class RouteStopResponse {
   final bool respuesta;
-  final List<RouteStop> data;
+  final List<RouteStopModel> data;
 
   RouteStopResponse({
     required this.respuesta,
@@ -12,26 +12,32 @@ class RouteStopResponse {
     return RouteStopResponse(
       respuesta: json['respuesta'] as bool? ?? false,
       data: (json['data'] as List<dynamic>?)
-          ?.map((item) => RouteStop.fromJson(item as Map<String, dynamic>))
+          ?.map((item) => RouteStopModel.fromJson(item as Map<String, dynamic>))
           .toList() ?? [],
     );
   }
 }
 
-class RouteStop {
-  final double latitud;
-  final double longitud;
+class RouteStopModel {
+  final double latitude;
+  final double longitude;
+  final int? id;
   final int? orden;
-  final String? nombre;
+  final String? name;
+  final String? description;
+  final int? numeroParada;
 
-  RouteStop({
-    required this.latitud,
-    required this.longitud,
+  RouteStopModel({
+    required this.latitude,
+    required this.longitude,
+    this.id,
     this.orden,
-    this.nombre,
+    this.name,
+    this.description,
+    this.numeroParada,
   });
 
-  factory RouteStop.fromJson(Map<String, dynamic> json) {
+  factory RouteStopModel.fromJson(Map<String, dynamic> json) {
     // Handle string or number inputs for coordinates
     double parseDouble(dynamic value) {
       if (value is double) return value;
@@ -40,11 +46,14 @@ class RouteStop {
       return 0.0;
     }
 
-    return RouteStop(
-      latitud: parseDouble(json['latitud'] ?? json['latitude'] ?? json['Latitud']),
-      longitud: parseDouble(json['longitud'] ?? json['longitude'] ?? json['Longitud']),
+    return RouteStopModel(
+      latitude: parseDouble(json['latitud'] ?? json['latitude'] ?? json['Latitud']),
+      longitude: parseDouble(json['longitud'] ?? json['longitude'] ?? json['Longitud']),
+      id: json['id'] as int?,
       orden: json['orden'] as int?,
-      nombre: json['nombre'] as String? ?? json['name'] as String?,
+      name: json['nombre'] as String? ?? json['name'] as String?,
+      description: json['descripcion'] as String? ?? json['description'] as String?,
+      numeroParada: json['numero_parada'] as int?,
     );
   }
 }

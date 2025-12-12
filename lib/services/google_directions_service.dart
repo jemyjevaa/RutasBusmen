@@ -8,18 +8,18 @@ class GoogleDirectionsService {
   static const String _apiKey = 'AIzaSyA6WSHJ8R0AMDhhk0e_-Sn0KLEwSB60QKw';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/directions/json';
 
-  Future<List<LatLng>> getRoutePolyline(List<RouteStop> stops) async {
+  Future<List<LatLng>> getRoutePolyline(List<RouteStopModel> stops) async {
     if (stops.length < 2) return [];
 
     try {
-      final origin = '${stops.first.latitud},${stops.first.longitud}';
-      final destination = '${stops.last.latitud},${stops.last.longitud}';
+      final origin = '${stops.first.latitude},${stops.first.longitude}';
+      final destination = '${stops.last.latitude},${stops.last.longitude}';
       
       String waypoints = '';
       if (stops.length > 2) {
         final intermediate = stops.sublist(1, stops.length - 1);
         final waypointsList = intermediate
-            .map((s) => 'via:${s.latitud},${s.longitud}')
+            .map((s) => 'via:${s.latitude},${s.longitude}')
             .toList();
         
         if (waypointsList.isNotEmpty) {

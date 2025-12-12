@@ -1,11 +1,14 @@
+import 'dart:async'; // For Timer
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart'; // For distance calculation
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
+import '../models/unit_location_model.dart'; // Added
 import '../services/route_api_service.dart';
-import '../services/tracking_service.dart';
 import '../services/google_directions_service.dart';
-import '../models/unit_location_model.dart';
 import '../models/route_path_point.dart';
+import '../models/api_config.dart'; // For ApiConfig
+import '../services/UserSession.dart'; // For UserSession
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // For LatLng
 
 /// ViewModel for managing route data and state
@@ -46,12 +49,6 @@ class RouteViewModel extends ChangeNotifier {
       if (response.respuesta) {
         _allRoutes = response.data;
         _errorMessage = null;
-        
-        // Initialize tracking if not already done
-        if (!_isTrackingInitialized) {
-          _initTracking();
-          _isTrackingInitialized = true;
-        }
       } else {
         _errorMessage = 'No se pudieron cargar las rutas';
       }
@@ -121,10 +118,10 @@ class RouteViewModel extends ChangeNotifier {
 
   // --- Route Stops Logic ---
 
-  List<RouteStop> _routeStops = [];
+  List<RouteStopModel> _routeStops = [];
   bool _isLoadingStops = false;
   
-  List<RouteStop> get routeStops => _routeStops;
+  List<RouteStopModel> get routeStops => _routeStops;
   bool get isLoadingStops => _isLoadingStops;
 
   // --- Route Path Logic ---
@@ -186,56 +183,138 @@ class RouteViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-
   // --- Tracking Logic ---
-  final TrackingService _trackingService = TrackingService();
-  List<UnitLocation> _allUnits = [];
-  String? _selectedRouteKey; // Track currently selected route
-  bool _isTrackingInitialized = false;
+  
+  Timer? _pollingTimer;
+  List<UnitLocation> _units = [];
+  bool _isUnitInRoute = false;
+  String _currentDestination = '';
+  
+  List<UnitLocation> get units => _units;
+  bool get isUnitInRoute => _isUnitInRoute;
+  String get currentDestination => _currentDestination;
 
-  /// Get the single active unit for the currently selected route
-  /// Returns only ONE unit - the one actively doing the route
-  List<UnitLocation> get visibleUnits {
-    if (_selectedRouteKey == null || _allUnits.isEmpty) return [];
+  /// Start tracking a route
+  void startTracking(RouteData route) {
+    print('🚀 Starting tracking for route: ${route.claveRuta}');
+    stopTracking(); // Stop any existing tracking
     
-    // Return only the first unit (the active one doing the route)
-    // If there are multiple units, we show only the first one
-    return [_allUnits.first];
-  }
-
-  void _initTracking() {
-    _trackingService.initialize();
-    _trackingService.locationStream.listen((units) {
-      _allUnits = units;
-      notifyListeners();
+    // Initial fetch
+    _fetchUnits(route);
+    
+    // Poll every 3 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _fetchUnits(route);
     });
   }
 
-  /// Fetch units for a specific route
-  Future<void> fetchUnitsForRoute(String claveRuta) async {
-    print('🚌 Fetching units for route: $claveRuta');
-    _selectedRouteKey = claveRuta;
-    
-    // Initialize tracking if not already done
-    if (!_isTrackingInitialized) {
-      _initTracking();
-      _isTrackingInitialized = true;
-    }
-    
-    // Fetch units for this specific route
-    await _trackingService.fetchUnitsForRoute(claveRuta);
+  /// Stop tracking
+  void stopTracking() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+    _units = [];
+    _isUnitInRoute = false;
+    _currentDestination = '';
+    notifyListeners();
   }
 
-  /// Clear selected route and units
-  void clearSelectedRoute() {
-    _selectedRouteKey = null;
-    _allUnits = [];
-    notifyListeners();
+  /// Fetch units for the route
+  Future<void> _fetchUnits(RouteData route) async {
+    try {
+      // Check if route is active (within schedule)
+      if (!route.isActiveNow()) {
+        _units = [];
+        _isUnitInRoute = false;
+        _currentDestination = 'Fuera de horario';
+        notifyListeners();
+        return;
+      }
+      
+      final session = UserSession();
+      final empresa = session.getCompanyData()?.clave ?? 'lyondellbasell';
+      
+      // Use the existing _apiService
+      final units = await _apiService.getUnitsForRoute(empresa, route.claveRuta);
+      
+      _units = units;
+      
+      if (units.isNotEmpty) {
+        _isUnitInRoute = true;
+        
+        // Enrich unit data with real-time position from Traccar
+        for (var i = 0; i < _units.length; i++) {
+           final unit = _units[i];
+           // Fetch device details to get positionId
+           final deviceData = await _apiService.getDeviceDetails(unit.idplataformagps);
+           if (deviceData != null) {
+             final positionId = deviceData['positionId'] as int?;
+             if (positionId != null) {
+               // Fetch position details
+               final positionData = await _apiService.getDevicePosition(positionId);
+               if (positionData != null) {
+                 // Update unit with real-time data
+                 _units[i] = unit.copyWith(
+                   latitude: positionData['latitude'] as double? ?? unit.latitude,
+                   longitude: positionData['longitude'] as double? ?? unit.longitude,
+                   speed: (positionData['speed'] as num?)?.toDouble() ?? 0.0,
+                   course: (positionData['course'] as num?)?.toDouble() ?? 0.0,
+                 );
+               }
+             }
+           }
+        }
+        
+        // Update banner with next stop info
+        if (_routeStops.isNotEmpty) {
+           _currentDestination = _getNextStopName(_units.first);
+        } else {
+           _currentDestination = route.displayName;
+        }
+      } else {
+        _isUnitInRoute = false;
+        _currentDestination = 'Sin unidades asignadas';
+      }
+      
+      notifyListeners();
+      
+    } catch (e) {
+      print('❌ Error fetching units: $e');
+    }
+  }
+
+  /// Calculate next stop for the unit
+  String _getNextStopName(UnitLocation unit) {
+    if (_routeStops.isEmpty) return '';
+    
+    // Find the closest stop
+    double minDistance = double.infinity;
+    String closestStopName = '';
+    int closestStopIndex = -1;
+    
+    for (int i = 0; i < _routeStops.length; i++) {
+      final stop = _routeStops[i];
+      final distance = Geolocator.distanceBetween(
+        unit.latitude, unit.longitude, 
+        stop.latitude, stop.longitude
+      );
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestStopName = stop.name ?? '';
+        closestStopIndex = i;
+      }
+    }
+    
+    if (closestStopIndex != -1) {
+      final stop = _routeStops[closestStopIndex];
+      return 'UNIDAD ${unit.clave} : PARADA ${stop.numeroParada ?? (closestStopIndex + 1)} ${stop.name}';
+    }
+    
+    return '';
   }
 
   @override
   void dispose() {
-    _trackingService.dispose();
     super.dispose();
   }
 }

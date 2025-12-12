@@ -18,6 +18,14 @@ class ApiConfig {
   static const String unidadDeRuta = '/unidadDeRuta';
   static const String infoRutaEndpoint = '/ruta';
   
+  // Traccar/GPS Endpoints (Replicating Swift)
+  static const String devicesEndpoint = '/devices';
+  static const String positionsEndpoint = '/positions';
+  
+  // Basic Auth Credentials (from Swift code)
+  static const String gpsUsername = 'usuariosapp';
+  static const String gpsPassword = 'usuarios0904';
+  
   /// Set the current company (should be called after login)
   static void setEmpresa(String empresa) {
     _empresa = empresa;

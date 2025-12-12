@@ -1,6 +1,8 @@
 /// Route models based on API response structure
 /// Converted from Swift ItemRutas model
 
+import 'package:flutter/material.dart';
+
 /// Main response wrapper
 class RouteResponse {
   final bool respuesta;
@@ -87,9 +89,35 @@ class RouteData {
     final now = DateTime.now();
     final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     
-    // Simple string comparison works for HH:MM format
-    return currentTime.compareTo(horaInicioRuta) >= 0 && 
-           currentTime.compareTo(horaFinRuta) <= 0;
+    print('⏰ Schedule check: Current=$currentTime, Start=$horaInicioRuta, End=$horaFinRuta');
+    
+    // Parse times for proper comparison
+    try {
+      final current = TimeOfDay(hour: now.hour, minute: now.minute);
+      final start = _parseTime(horaInicioRuta);
+      final end = _parseTime(horaFinRuta);
+      
+      final currentMinutes = current.hour * 60 + current.minute;
+      final startMinutes = start.hour * 60 + start.minute;
+      final endMinutes = end.hour * 60 + end.minute;
+      
+      final isActive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+      print('⏰ Is active: $isActive (current: $currentMinutes, start: $startMinutes, end: $endMinutes)');
+      
+      return isActive;
+    } catch (e) {
+      print('❌ Error parsing time: $e');
+      // If parsing fails, assume route is active
+      return true;
+    }
+  }
+  
+  TimeOfDay _parseTime(String time) {
+    final parts = time.split(':');
+    return TimeOfDay(
+      hour: int.parse(parts[0]),
+      minute: int.parse(parts[1]),
+    );
   }
 
   /// Get display name with direction

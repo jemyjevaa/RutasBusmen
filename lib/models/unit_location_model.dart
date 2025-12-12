@@ -9,6 +9,8 @@ class UnitLocation {
   final double longitude;
   final double? speed;
   final double? course;
+  final String? destination; // NUEVO
+  final bool isInRoute;      // NUEVO
 
   UnitLocation({
     required this.id,
@@ -20,6 +22,8 @@ class UnitLocation {
     required this.longitude,
     this.speed,
     this.course,
+    this.destination,
+    required this.isInRoute,
   });
 
   factory UnitLocation.fromJson(Map<String, dynamic> json) {
@@ -33,6 +37,8 @@ class UnitLocation {
       longitude: _parseDouble(json['longitude']),
       speed: json['speed'] != null ? _parseDouble(json['speed']) : null,
       course: json['course'] != null ? _parseDouble(json['course']) : null,
+      destination: json['destination'] ?? json['destino'],
+      isInRoute: json['is_in_route'] ?? json['enRuta'] ?? false,
     );
   }
 
@@ -49,6 +55,34 @@ class UnitLocation {
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value) ?? 0.0;
     return 0.0;
+  }
+
+  UnitLocation copyWith({
+    int? id,
+    String? clave,
+    int? idplataformagps,
+    int? positionId,
+    String? category,
+    double? latitude,
+    double? longitude,
+    double? speed,
+    double? course,
+    String? destination,
+    bool? isInRoute,
+  }) {
+    return UnitLocation(
+      id: id ?? this.id,
+      clave: clave ?? this.clave,
+      idplataformagps: idplataformagps ?? this.idplataformagps,
+      positionId: positionId ?? this.positionId,
+      category: category ?? this.category,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      speed: speed ?? this.speed,
+      course: course ?? this.course,
+      destination: destination ?? this.destination,
+      isInRoute: isInRoute ?? this.isInRoute,
+    );
   }
 
   String get displayName => clave;
