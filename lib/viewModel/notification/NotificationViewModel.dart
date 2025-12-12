@@ -24,6 +24,7 @@ class NotificationsViewModel extends ChangeNotifier {
     try {
       final session = UserSession();
       Empresa? company = session.getCompanyData();
+
       final response = await _serv.handlingRequestParsed<ApiResNotification>(
         urlParam: RequestServ.urlNotification,
         params: {'empresa': company!.clave},
@@ -32,15 +33,10 @@ class NotificationsViewModel extends ChangeNotifier {
         fromJson: (json) => ApiResNotification.fromJson(json),
       );
 
-      print("=> ${response?.data}");
-
-      // Supongamos que response contiene una lista en response.data
       // Debes adaptar según estructura real
-      // final List<NotificationItem> items = response?.map((json) {
-      //   return NotificationItem.fromJson(json);
-      // }).toList();
+      final List<NotificationItem> items = response?.data ?? [];
 
-      _notifications = [];
+      _notifications = items;
       _error = null;
     } catch (e) {
       _error = e.toString();

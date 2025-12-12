@@ -2,12 +2,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class RequestServ {
-  // static const String baseUrlAdm = "https://lectorasadmintemsa.geovoy.com/";
+  // static const String baseUrlAdm = "";
   static const String baseUrlNor = "https://rutasbusmen.geovoy.com/";
 
   static const String urlvalidaUsuarioEmpresa = "api/validaUsuarioEmpresa";
 
   static const String urlNotification = "api/notificacionporempresa";
+
+  static const String urlSurvey = "api/encuesta";
+  static const String urlSuggestion = "api/sugerencias";
+
+  static const String urlUnitAssignedRoute = "api/unidadDeRuta";
 
   // Singleton pattern
   RequestServ._privateConstructor();
@@ -30,7 +35,7 @@ class RequestServ {
       String fullUrl = base + urlParam;
 
       http.Response response;
-
+      // print("=> $fullUrl");
       // Agregar parámetros para GET en query string
       if (method.toUpperCase() == 'GET' && params != null && params.isNotEmpty) {
         final uri = Uri.parse(fullUrl).replace(queryParameters: params);

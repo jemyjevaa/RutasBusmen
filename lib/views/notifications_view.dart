@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../services/ResponseServ.dart';
 import '../viewModel/notification/NotificationViewModel.dart';
 
 class NotificationsView extends StatefulWidget {
@@ -144,7 +145,7 @@ class _NotificationsViewState extends State<NotificationsView> {
                   key: Key('notification_${n.id}'),
                   direction: DismissDirection.endToStart,
                   onDismissed: (_) => vm.removeNotificationAt(index),
-                  child: _buildNotificationCard(n as Map<String, dynamic>, index),
+                  child: _buildNotificationCard(n , index),
                 );
               },
             ),
@@ -178,9 +179,115 @@ class _NotificationsViewState extends State<NotificationsView> {
     );
   }
 
-  Widget _buildNotificationCard(Map<String, dynamic> notification, int index) {
-    final bool isRead = notification['isRead'] ?? false;
+  // Widget _buildNotificationCard(Map<String, dynamic> notification, int index) {
+  //   final bool isRead = notification['isRead'] ?? false;
+  //
+  //   return Dismissible(
+  //     key: Key('notification_$index'),
+  //     direction: DismissDirection.endToStart,
+  //     background: Container(
+  //       alignment: Alignment.centerRight,
+  //       padding: const EdgeInsets.only(right: 20),
+  //       margin: const EdgeInsets.only(bottom: 12),
+  //       decoration: BoxDecoration(
+  //         color: Colors.red,
+  //         borderRadius: BorderRadius.circular(12),
+  //       ),
+  //       child: const Icon(
+  //         Icons.delete,
+  //         color: Colors.white,
+  //         size: 28,
+  //       ),
+  //     ),
+  //     onDismissed: (direction) {
+  //       setState(() {
+  //         _notifications.removeAt(index);
+  //       });
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Notificación eliminada')),
+  //       );
+  //     },
+  //     child: Container(
+  //       margin: const EdgeInsets.only(bottom: 12),
+  //       decoration: BoxDecoration(
+  //         color: isRead ? Colors.white : primaryOrange.withOpacity(0.05),
+  //         borderRadius: BorderRadius.circular(12),
+  //         border: Border.all(
+  //           color: isRead ? Colors.grey[300]! : primaryOrange.withOpacity(0.3),
+  //           width: 1,
+  //         ),
+  //         boxShadow: [
+  //           BoxShadow(
+  //             color: Colors.grey.withOpacity(0.1),
+  //             blurRadius: 4,
+  //             offset: const Offset(0, 2),
+  //           ),
+  //         ],
+  //       ),
+  //       child: ListTile(
+  //         contentPadding: const EdgeInsets.all(16),
+  //         leading: Container(
+  //           padding: const EdgeInsets.all(12),
+  //           decoration: BoxDecoration(
+  //             color: primaryOrange.withOpacity(0.1),
+  //             borderRadius: BorderRadius.circular(12),
+  //           ),
+  //           child: Icon(
+  //             notification['icon'],
+  //             color: primaryOrange,
+  //             size: 28,
+  //           ),
+  //         ),
+  //         title: Text(
+  //           notification['title'],
+  //           style: TextStyle(
+  //             fontSize: 16,
+  //             fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
+  //             color: Colors.black87,
+  //           ),
+  //         ),
+  //         subtitle: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             const SizedBox(height: 4),
+  //             Text(
+  //               notification['message'],
+  //               style: TextStyle(
+  //                 fontSize: 14,
+  //                 color: Colors.grey[700],
+  //               ),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Text(
+  //               notification['time'],
+  //               style: TextStyle(
+  //                 fontSize: 12,
+  //                 color: Colors.grey[500],
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         trailing: !isRead
+  //             ? Container(
+  //                 width: 10,
+  //                 height: 10,
+  //                 decoration: const BoxDecoration(
+  //                   color: primaryOrange,
+  //                   shape: BoxShape.circle,
+  //                 ),
+  //               )
+  //             : null,
+  //         onTap: () {
+  //           setState(() {
+  //             notification['isRead'] = true;
+  //           });
+  //         },
+  //       ),
+  //     ),
+  //   );
+  // }
 
+  Widget _buildNotificationCard(NotificationItem item, int index) {
     return Dismissible(
       key: Key('notification_$index'),
       direction: DismissDirection.endToStart,
@@ -192,16 +299,13 @@ class _NotificationsViewState extends State<NotificationsView> {
           color: Colors.red,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
-          size: 28,
-        ),
+        child: const Icon(Icons.delete, color: Colors.white, size: 28),
       ),
-      onDismissed: (direction) {
+      onDismissed: (_) {
         setState(() {
           _notifications.removeAt(index);
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Notificación eliminada')),
         );
@@ -209,10 +313,12 @@ class _NotificationsViewState extends State<NotificationsView> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: isRead ? Colors.white : primaryOrange.withOpacity(0.05),
+          color: item.isRead ? Colors.white : primaryOrange.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isRead ? Colors.grey[300]! : primaryOrange.withOpacity(0.3),
+            color: item.isRead
+                ? Colors.grey[300]!
+                : primaryOrange.withOpacity(0.3),
             width: 1,
           ),
           boxShadow: [
@@ -231,17 +337,13 @@ class _NotificationsViewState extends State<NotificationsView> {
               color: primaryOrange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              notification['icon'],
-              color: primaryOrange,
-              size: 28,
-            ),
+            child: Icon(Icons.notifications, color: primaryOrange, size: 28),
           ),
           title: Text(
-            notification['title'],
+            item.titulo,
             style: TextStyle(
               fontSize: 16,
-              fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
+              fontWeight: item.isRead ? FontWeight.w500 : FontWeight.bold,
               color: Colors.black87,
             ),
           ),
@@ -250,7 +352,7 @@ class _NotificationsViewState extends State<NotificationsView> {
             children: [
               const SizedBox(height: 4),
               Text(
-                notification['message'],
+                item.notificacion,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[700],
@@ -258,7 +360,7 @@ class _NotificationsViewState extends State<NotificationsView> {
               ),
               const SizedBox(height: 8),
               Text(
-                notification['time'],
+                item.fecha,
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[500],
@@ -266,23 +368,25 @@ class _NotificationsViewState extends State<NotificationsView> {
               ),
             ],
           ),
-          trailing: !isRead
-              ? Container(
-                  width: 10,
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: primaryOrange,
-                    shape: BoxShape.circle,
-                  ),
-                )
-              : null,
+          trailing: item.isRead
+              ? null
+              : Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: primaryOrange,
+              shape: BoxShape.circle,
+            ),
+          ),
           onTap: () {
             setState(() {
-              notification['isRead'] = true;
+              item.isRead = true;
             });
           },
         ),
       ),
     );
   }
+
+
 }

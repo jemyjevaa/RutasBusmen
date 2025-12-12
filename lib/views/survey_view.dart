@@ -144,6 +144,7 @@ class SurveyViewForm extends StatelessWidget{
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: vm.shiftController,
+                    readOnly: true,
                     decoration: _buildInputDecoration(
                       hint: AppStrings.get('scheduleLabel'),
                       icon: Icons.access_time,
@@ -163,6 +164,7 @@ class SurveyViewForm extends StatelessWidget{
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: vm.unitController,
+                    readOnly: true,
                     decoration: _buildInputDecoration(
                       hint: AppStrings.get('unitLabel'),
                       icon: Icons.bus_alert,

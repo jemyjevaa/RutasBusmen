@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../models/route_model.dart';
+import '../../services/RequestServ.dart';
 import '../../services/ResponseServ.dart';
 import '../../services/UserSession.dart';
 import '../../utils/app_strings.dart';
@@ -20,16 +21,41 @@ class SurveyViewModel extends ChangeNotifier{
   int operator = 0;
   int operatorDriver = 0;
 
+  final serv = RequestServ.instance;
+  final session = UserSession();
+  late Empresa? company = session.getCompanyData();
+
   @override
   void dispose() {
     nameController.dispose();
     emailController.dispose();
+    shiftController.dispose();
+    unitController.dispose();
     super.dispose();
   }
 
-  void setRoute(RouteData? route){
+  Future<void> setRoute(RouteData? route) async {
+
     selectedRoute = route;
-    notifyListeners();
+    setShift(route!.turnoRuta);
+
+    try{
+
+
+      ApiResUnitAssignedRoute? response = await serv.handlingRequestParsed<ApiResUnitAssignedRoute>(
+        urlParam: RequestServ.urlUnitAssignedRoute,
+        params: {'empresa': company!.clave, 'claveRuta': route!.claveRuta},
+        method: 'POST',
+        asJson: true,
+        fromJson: (json) => ApiResUnitAssignedRoute.fromJson(json),
+      );
+
+      setUnit(response!.data[0].clave);
+    }catch( excep ){
+      print("excep => ${excep}");
+    }finally{
+      notifyListeners();
+    }
   }
 
   void setUnitClean(int val){
@@ -58,7 +84,7 @@ class SurveyViewModel extends ChangeNotifier{
   }
 
 
-  void submitForm( BuildContext context ){
+  Future<void> submitForm( BuildContext context ) async {
     if(formKey.currentState!.validate()){
 
       if(selectedRoute == null){
@@ -79,24 +105,42 @@ class SurveyViewModel extends ChangeNotifier{
         return;
       }
 
-      final session = UserSession();
-      Empresa? company = session.getCompanyData();
+      // final session = UserSession();
+      // Empresa? company = session.getCompanyData();
 
-      Object things = {
-        'actitud': validateQuest(operator),
-        'limpieza': validateQuest(unitClean),
-        'empresa': company!.clave,
-        'coduccion': validateQuest(operatorDriver),
-        'correo': emailController.text,
-        'ruta': null,
-        'turno': shiftController.text,
-        'unidad': unitController.text,
-        'nombre_usuario': nameController.text,
-      };
+      final serv = RequestServ.instance;
+      try{
 
-      print(things);
+        await serv.handlingRequestParsed<ApiResSurvey>(
+          urlParam: RequestServ.urlSurvey,
+          params: {
+            'actitud': validateQuest(operator),
+            'limpieza': validateQuest(unitClean),
+            'empresa': company?.clave,
+            'coduccion': validateQuest(operatorDriver),
+            'correo': emailController.text,
+            'ruta': selectedRoute!.nombreRuta,
+            'turno': shiftController.text,
+            'unidad': unitController.text,
+            'nombre_usuario': nameController.text,
+          },
+          method: 'POST',
+          asJson: true,
+          fromJson: (json) => ApiResSurvey.fromJson(json),
+        );
 
-      notifyListeners();
+        AnimatedResultDialog.showSuccess(
+          context,
+          title: 'Success',
+          message: AppStrings.get('suggestionSent'),
+        );
+        clearForm();
+      }catch( excep ){
+        print("excep => ${excep}");
+      }finally{
+        notifyListeners();
+      }
+
     }
   }
 
@@ -106,6 +150,17 @@ class SurveyViewModel extends ChangeNotifier{
       5 => "Buena",
       _ => "Regular"
     };
+  }
+
+  void clearForm(){
+    nameController.clear();
+    emailController.clear();
+    shiftController.clear();
+    unitController.clear();
+    selectedRoute = null;
+    unitClean = 0;
+    operator = 0;
+    operatorDriver = 0;
   }
 
 

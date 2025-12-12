@@ -229,9 +229,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print("after user: ${session.getUserData()} | company: ${session.getCompanyData()}");
+    // print("after user: ${session.getUserData()} | company: ${session.getCompanyData()}");
     session.clear();
-    print("before user: ${session.getUserData()} | company: ${session.getCompanyData()}");
+    // print("before user: ${session.getUserData()} | company: ${session.getCompanyData()}");
 
     _emailController.text = session.isPersist ? session.email!! : '';
     _pwdController.text = session.isPersist ? session.token!! : '';

@@ -1,4 +1,6 @@
 // region Login
+import 'dart:ffi';
+
 class ApiResLogin {
   final bool respuesta;
   final Usuario usuario;
@@ -193,11 +195,224 @@ class ApiResNotification {
     required this.data,
   });
 
-  // Si tu API te devuelve un JSON, puedes usar un factory constructor:
   factory ApiResNotification.fromJson(Map<String, dynamic> json) {
     return ApiResNotification(
       respuesta: json['respuesta'] as bool,
-      data: List<NotificationItem>.from(json['data'] as List<dynamic>),
+      data: (json['data'] as List<dynamic>)
+          .map((item) => NotificationItem.fromJson(item))
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'respuesta': respuesta,
+      'data': data.map((e) => e.toJson()).toList(),
+    };
+  }
+}
+
+class NotificationItem {
+  final String titulo;
+  final String notificacion;
+  final String fecha;
+  final int id;
+  bool isRead;
+
+  NotificationItem({
+    required this.id,
+    required this.titulo,
+    required this.notificacion,
+    required this.fecha,
+    this.isRead = false,
+  });
+
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    return NotificationItem(
+      id: json['id'] as int,
+      titulo: json['titulo'] as String,
+      notificacion: json['notificacion'] as String,
+      fecha: json['fecha'] as String,
+      isRead: json['isRead'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'titulo': titulo,
+      'notificacion': notificacion,
+      'fecha': fecha,
+      'isRead': isRead,
+    };
+  }
+}
+// endregion notification
+
+// region Assigned Unit Route
+class ApiResUnitAssignedRoute {
+  final bool respuesta;
+  final List<UnitAssigned> data;
+
+  ApiResUnitAssignedRoute({
+    required this.respuesta,
+    required this.data,
+  });
+
+  factory ApiResUnitAssignedRoute.fromJson(Map<String, dynamic> json) {
+    return ApiResUnitAssignedRoute(
+      respuesta: json['respuesta'] ?? false,
+      data: (json['data'] as List<dynamic>? ?? [])
+          .map((item) => UnitAssigned.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class UnitAssigned {
+  final int id;
+  final String clave;
+  final String idplataformagps;
+  final int positionId;
+  final String category;
+  final double latitude;
+  final double longitude;
+
+  UnitAssigned({
+    required this.id,
+    required this.clave,
+    required this.idplataformagps,
+    required this.positionId,
+    required this.category,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  factory UnitAssigned.fromJson(Map<String, dynamic> json) {
+    return UnitAssigned(
+      id: json['id'] ?? 0,
+      clave: json['clave'] ?? '',
+      idplataformagps: json['idplataformagps'] ?? 0,
+      positionId: json['positionId'] ?? 0,
+      category: json['category'] ?? '',
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "clave": clave,
+    "idplataformagps": idplataformagps,
+    "positionId": positionId,
+    "category": category,
+    "latitude": latitude,
+    "longitude": longitude,
+  };
+}
+// endregion Assigned Unit Route
+
+// region Survey
+class ApiResSurvey {
+  final bool respuesta;
+  final SurveyResponse data;
+
+  ApiResSurvey({
+    required this.respuesta,
+    required this.data,
+  });
+
+  factory ApiResSurvey.fromJson(Map<String, dynamic> json) {
+    return ApiResSurvey(
+      respuesta: json['respuesta'],
+      data: SurveyResponse.fromJson(json['data']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'respuesta': respuesta,
+      'data': data.toJson(),
+    };
+  }
+}
+
+class SurveyResponse {
+  final String nombre_usuario;
+  final String correo;
+  final String limpieza;
+  final String coduccion; // ¿quizás quisiste decir "conduccion"?
+  final String empresa;
+  final String ruta;
+  final String unidad;
+  final String turno;
+  final String updated_at;
+  final String created_at;
+  final int id;
+
+  SurveyResponse({
+    required this.nombre_usuario,
+    required this.correo,
+    required this.limpieza,
+    required this.coduccion,
+    required this.empresa,
+    required this.ruta,
+    required this.unidad,
+    required this.turno,
+    required this.updated_at,
+    required this.created_at,
+    required this.id,
+  });
+
+  factory SurveyResponse.fromJson(Map<String, dynamic> json) {
+    return SurveyResponse(
+      nombre_usuario: json['nombre_usuario'],
+      correo: json['correo'],
+      limpieza: json['limpieza'],
+      coduccion: json['coduccion'],
+      empresa: json['empresa'],
+      ruta: json['ruta'],
+      unidad: json['unidad'],
+      turno: json['turno'],
+      updated_at: json['updated_at'],
+      created_at: json['created_at'],
+      id: json['id'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'nombre_usuario': nombre_usuario,
+      'correo': correo,
+      'limpieza': limpieza,
+      'coduccion': coduccion,
+      'empresa': empresa,
+      'ruta': ruta,
+      'unidad': unidad,
+      'turno': turno,
+      'updated_at': updated_at,
+      'created_at': created_at,
+      'id': id,
+    };
+  }
+}
+
+// endregion Survey
+
+// region suggestion
+class ApiResSuggestion {
+  final bool respuesta;
+  final String data;
+
+  ApiResSuggestion({
+    required this.respuesta,
+    required this.data,
+  });
+
+  factory ApiResSuggestion.fromJson(Map<String, dynamic> json) {
+    return ApiResSuggestion(
+      respuesta: json['respuesta'],
+      data: json['data'],
     );
   }
 
@@ -208,29 +423,4 @@ class ApiResNotification {
     };
   }
 }
-class NotificationItem {
-  final String title;
-  final String message;
-  final String time;
-  final String id;  // o lo que identifique
-  bool isRead;
-
-  NotificationItem({
-    required this.id,
-    required this.title,
-    required this.message,
-    required this.time,
-    this.isRead = false,
-  });
-
-  factory NotificationItem.fromJson(Map<String, dynamic> json) {
-    return NotificationItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
-      time: json['time'] as String,
-      isRead: json['isRead'] as bool? ?? false,
-    );
-  }
-}
-// endregion notification
+// endregion suggestion
