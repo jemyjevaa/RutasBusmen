@@ -66,6 +66,23 @@ class UserSession {
 
   // endregion Login Data
 
+
+  // Check if panic button feature is enabled for current user's company
+  bool isPanicButtonEnabled() {
+    final user = getUserData();
+    if (user == null) return false;
+    
+    final email = user.email.toLowerCase();
+    
+    // List of authorized email domains
+    final authorizedDomains = [
+      '@flexsur.com',
+      'flexsur',
+    ];
+    
+    return authorizedDomains.any((domain) => email.contains(domain));
+  }
+
   // Limpiar datos
   Future<void> clear() async {
     _prefs?.remove("userData");
