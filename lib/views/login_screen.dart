@@ -23,6 +23,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
 
+  @override
+  void initState() {
+    super.initState();
+    session.clear();
+    _emailController.text = session.isPersist ? session.email ?? '' : '';
+    _pwdController.text = session.isPersist ? session.token ?? '' : '';
+  }
+
   void _showLanguageSelectionSheet() {
     showModalBottomSheet(
       context: context,
@@ -229,14 +237,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // print("after user: ${session.getUserData()} | company: ${session.getCompanyData()}");
-    session.clear();
-    // print("before user: ${session.getUserData()} | company: ${session.getCompanyData()}");
-
-    _emailController.text = session.isPersist ? session.email!! : '';
-    _pwdController.text = session.isPersist ? session.token!! : '';
-
-
     return Scaffold(
         body: Stack(
           children: [
@@ -534,11 +534,4 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
   }
-
-  @override
-  void initState() {
-    super.initState();
-    _emailController.text = session.isPersist ? (session.email ?? '') : '';
-  }
-
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/route_selector.dart';
 import '../models/route_model.dart';
+import '../models/route_stop_model.dart'; // Import RouteStopModel
+import '../viewmodels/route_viewmodel.dart'; // Import RouteViewModel
 
 class StopsView extends StatefulWidget {
   const StopsView({super.key});
@@ -15,46 +18,17 @@ class _StopsViewState extends State<StopsView> {
   // Ruta seleccionada
   RouteData? _selectedRoute;
 
-  // Datos de ejemplo de paradas
-  final List<Map<String, dynamic>> _stops = [
-    {
-      'name': 'CUARTA GLORIETA',
-      'time': '08:00 AM',
-      'address': 'Av. Principal #123',
-      'isPassed': true,
-    },
-    {
-      'name': 'AV. SAN RAFAEL',
-      'time': '08:15 AM',
-      'address': 'Blvd. Comercio #456',
-      'isPassed': true,
-    },
-    {
-      'name': 'AV. SAN GABRIEL',
-      'time': '08:30 AM',
-      'address': 'Av. Educación #789',
-      'isPassed': false,
-      'isNext': true,
-    },
-    {
-      'name': 'TERCERA GLORIETA',
-      'time': '08:45 AM',
-      'address': 'Calle Salud #321',
-      'isPassed': false,
-    },
-    {
-      'name': 'SEGUNDA GLORIETA',
-      'time': '09:00 AM',
-      'address': 'Av. Verde #654',
-      'isPassed': false,
-    },
-    {
-      'name': 'SAN PEDRO',
-      'time': '09:15 AM',
-      'address': 'Carretera Norte Km 5',
-      'isPassed': false,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Fetch routes if not already loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = context.read<RouteViewModel>();
+      if (viewModel.allRoutes.isEmpty) {
+        viewModel.fetchRoutes();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,84 +49,96 @@ class _StopsViewState extends State<StopsView> {
           // Route Selector
           Padding(
             padding: const EdgeInsets.all(16),
-            child: RouteSelector(
-              selectedRoute: _selectedRoute,
-              onRouteSelected: (route) {
-                setState(() {
-                  _selectedRoute = route;
-                });
+            child: Consumer<RouteViewModel>(
+              builder: (context, viewModel, child) {
+                return RouteSelector(
+                  selectedRoute: _selectedRoute,
+                  onRouteSelected: (route) {
+                    setState(() {
+                      _selectedRoute = route;
+                    });
+                    // Fetch stops for the selected route
+                    if (route != null) {
+                      viewModel.fetchStopsForRoute(route.claveRuta);
+                    } else {
+                      viewModel.clearRouteStops();
+                    }
+                  },
+                  primaryColor: primaryOrange,
+                );
               },
-              primaryColor: primaryOrange,
             ),
           ),
 
           // Header con información de la ruta (solo si hay ruta seleccionada)
           if (_selectedRoute != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: primaryOrange.withOpacity(0.1),
-                border: Border(
-                  bottom: BorderSide(
-                    color: primaryOrange.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: primaryOrange,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.directions_bus,
-                      color: Colors.white,
-                      size: 28,
+             Consumer<RouteViewModel>(
+              builder: (context, viewModel, child) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: primaryOrange.withOpacity(0.1),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: primaryOrange.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ruta: ${_selectedRoute!.nombreRuta}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: primaryOrange,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${_stops.length} paradas • ${_selectedRoute!.timeRange}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
+                        child: const Icon(
+                          Icons.directions_bus,
+                          color: Colors.white,
+                          size: 28,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Ruta: ${_selectedRoute!.nombreRuta}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // Show number of stops if loaded
+                            Text(
+                              viewModel.isLoadingStops 
+                                  ? 'Cargando paradas...' 
+                                  : '${viewModel.routeStops.length} paradas',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                );
+              }
+             ),
 
           // Lista de paradas
           Expanded(
-            child: _selectedRoute != null
-                ? ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _stops.length,
-                    itemBuilder: (context, index) {
-                      return _buildStopItem(_stops[index], index, _stops.length);
-                    },
-                  )
-                : Center(
+            child: Consumer<RouteViewModel>(
+              builder: (context, viewModel, child) {
+                if (_selectedRoute == null) {
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -171,19 +157,59 @@ class _StopsViewState extends State<StopsView> {
                         ),
                       ],
                     ),
-                  ),
+                  );
+                }
+
+                if (viewModel.isLoadingStops) {
+                   return const Center(
+                     child: CircularProgressIndicator(color: primaryOrange),
+                   );
+                }
+
+                if (viewModel.routeStops.isEmpty) {
+                   return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.highlight_off,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No hay paradas disponibles para esta ruta',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: viewModel.routeStops.length,
+                    itemBuilder: (context, index) {
+                      return _buildStopItem(viewModel.routeStops[index], index, viewModel.routeStops.length);
+                    },
+                  );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStopItem(Map<String, dynamic> stop, int index, int total) {
-    // Solo marcar como pasadas si la ruta está activa
-    final bool isRouteActive = _selectedRoute?.isActiveNow() ?? false;
-    final bool isPassed = isRouteActive ? (stop['isPassed'] ?? false) : false;
-    final bool isNext = isRouteActive ? (stop['isNext'] ?? false) : false;
+  Widget _buildStopItem(RouteStopModel stop, int index, int total) {
+    // Basic implementation without "isPassed" logic as we don't have unit location here contextually relevant to user trip in this view
     final bool isLast = index == total - 1;
+
+    // Use "description" if available, otherwise fallback or empty
+    final String address = stop.description ?? 'Ubicación de parada';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,57 +222,30 @@ class _StopsViewState extends State<StopsView> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isPassed
-                    ? primaryOrange
-                    : isNext
-                        ? primaryOrange
-                        : Colors.white,
+                color: Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: primaryOrange,
-                  width: isPassed || isNext ? 3 : 2,
+                  width: 2,
                 ),
-                boxShadow: isNext
-                    ? [
-                        BoxShadow(
-                          color: primaryOrange.withOpacity(0.4),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : [],
               ),
               child: Center(
-                child: isPassed
-                    ? const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 20,
-                      )
-                    : isNext
-                        ? const Icon(
-                            Icons.location_on,
-                            color: Colors.white,
-                            size: 20,
-                          )
-                        : Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: primaryOrange,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(
+                    color: primaryOrange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ),
             // Línea conectora
             if (!isLast)
               Container(
                 width: 3,
-                height: 80,
-                color: isPassed
-                    ? primaryOrange
-                    : primaryOrange.withOpacity(0.3),
+                height: 80, // Adjustable height based on content
+                color: primaryOrange.withOpacity(0.3),
               ),
           ],
         ),
@@ -257,15 +256,11 @@ class _StopsViewState extends State<StopsView> {
             margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isNext
-                  ? primaryOrange.withOpacity(0.05)
-                  : Colors.white,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isNext
-                    ? primaryOrange
-                    : Colors.grey[300]!,
-                width: isNext ? 2 : 1,
+                color: Colors.grey[300]!,
+                width: 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -283,45 +278,15 @@ class _StopsViewState extends State<StopsView> {
                   children: [
                     Expanded(
                       child: Text(
-                        stop['name'],
-                        style: TextStyle(
+                        stop.name ?? 'Parada ${index + 1}',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: isPassed
-                              ? Colors.grey[600]
-                              : Colors.black87,
-                          decoration: isPassed
-                              ? TextDecoration.lineThrough
-                              : null,
+                          color: Colors.black87,
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isNext
-                            ? primaryOrange
-                            : isPassed
-                                ? Colors.grey[300]
-                                : primaryOrange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        stop['time'],
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isNext
-                              ? Colors.white
-                              : isPassed
-                                  ? Colors.grey[600]
-                                  : primaryOrange,
-                        ),
-                      ),
-                    ),
+                    // Removed Time Container here
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -335,7 +300,7 @@ class _StopsViewState extends State<StopsView> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        stop['address'],
+                        address,
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey[600],
@@ -344,38 +309,6 @@ class _StopsViewState extends State<StopsView> {
                     ),
                   ],
                 ),
-                if (isNext) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: primaryOrange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 16,
-                          color: primaryOrange,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Próxima parada',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: primaryOrange,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

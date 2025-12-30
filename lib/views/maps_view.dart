@@ -536,6 +536,7 @@ class _MapsViewState extends State<MapsView> {
 
                    _buildDrawerItem(
                     icon: Icons.error,
+                     visible: false,
                     title: AppStrings.get('lostObjects'),
                     onTap: () {
                       Navigator.pop(context);
@@ -564,6 +565,7 @@ class _MapsViewState extends State<MapsView> {
 
                    _buildDrawerItem(
                     icon: Icons.info,
+                    visible: false,
                     title: AppStrings.get('information'),
                       onTap: () {
                         setState(() {
@@ -924,7 +926,13 @@ class _MapsViewState extends State<MapsView> {
     Color? iconColor,
     Color? textColor,
     Widget? trailing,
+    bool visible = true,
   }) {
+
+    if (!visible) {
+      return const SizedBox.shrink(); // no ocupa espacio
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -971,6 +979,7 @@ class _MapsViewState extends State<MapsView> {
     required String title,
     required VoidCallback onTap,
   }) {
+
     return Container(
       margin: const EdgeInsets.only(left: 40, right: 12, top: 4, bottom: 4),
       decoration: BoxDecoration(
@@ -1118,40 +1127,42 @@ class _MapsViewState extends State<MapsView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                if (selectedRouteDetail != null || selectedRouteGroupName != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.arrow_back_ios, size: 20),
-                                      onPressed: () {
-                                        setSheetState(() {
-                                          if (selectedRouteDetail != null) {
-                                            if (_selectedRouteTab == 2 && selectedRouteGroupName != null) {
-                                              selectedRouteDetail = null;
-                                            } else {
-                                              selectedRouteDetail = null;
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  if (selectedRouteDetail != null || selectedRouteGroupName != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8.0),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.arrow_back_ios, size: 20),
+                                        onPressed: () {
+                                          setSheetState(() {
+                                            if (selectedRouteDetail != null) {
+                                                selectedRouteDetail = null;
+                                            } else if (selectedRouteGroupName != null) {
+                                              selectedRouteGroupName = null;
                                             }
-                                          } else if (selectedRouteGroupName != null) {
-                                            selectedRouteGroupName = null;
-                                          }
-                                        });
-                                      },
-                                      color: primaryOrange,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
+                                          });
+                                        },
+                                        color: primaryOrange,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ),
+                                  Flexible(
+                                    child: Text(
+                                      title,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
-                                Text(
-                                  title,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.close),
