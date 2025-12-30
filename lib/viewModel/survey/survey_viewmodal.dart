@@ -20,6 +20,8 @@ class SurveyViewModel extends ChangeNotifier{
   int unitClean = 0;
   int operator = 0;
   int operatorDriver = 0;
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
 
   final serv = RequestServ.instance;
   final session = UserSession();
@@ -105,8 +107,8 @@ class SurveyViewModel extends ChangeNotifier{
         return;
       }
 
-      // final session = UserSession();
-      // Empresa? company = session.getCompanyData();
+      _isLoading = true;
+      notifyListeners();
 
       final serv = RequestServ.instance;
       try{
@@ -136,8 +138,13 @@ class SurveyViewModel extends ChangeNotifier{
         );
         clearForm();
       }catch( excep ){
-        print("excep => ${excep}");
+        AnimatedResultDialog.showError(
+          context,
+          title: '¡Ocurrio un problema!',
+          message: "Contacta con soporte por el error $excep",
+        );
       }finally{
+        _isLoading = false;
         notifyListeners();
       }
 

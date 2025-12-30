@@ -25,6 +25,9 @@ class SuggestionsViewModel extends ChangeNotifier {
   final session = UserSession();
   late Empresa? company = session.getCompanyData();
 
+  bool _isSubmitting = false;
+  bool get isSubmitting => _isSubmitting;
+
   Future<void> setRoute(RouteData? r) async {
     selectedRoute = r;
     try{
@@ -64,6 +67,9 @@ class SuggestionsViewModel extends ChangeNotifier {
         return;
       }
 
+      _isSubmitting = true;
+      notifyListeners();
+
       final serv = RequestServ.instance;
       try{
 
@@ -83,6 +89,16 @@ class SuggestionsViewModel extends ChangeNotifier {
           fromJson: (json) => ApiResSuggestion.fromJson(json),
         );
 
+         Object par = {
+           'comentario': commentController.text,
+           'empresa': company?.clave,
+           'correo': emailController.text,
+           'ruta': selectedRoute!.nombreRuta,
+           'turno': selectedSchedule.text,
+           'unidad': unitController.text,
+           'nombre_usuario': nameController.text,
+         };
+        // print("=> $par");
         AnimatedResultDialog.showSuccess(
           context,
           title: '¡Gracias!',
@@ -91,8 +107,14 @@ class SuggestionsViewModel extends ChangeNotifier {
         clearForm();
 
       }catch( excep ){
-        print("excep => ${excep}");
+        // print("excep => ${excep}");
+        AnimatedResultDialog.showError(
+          context,
+          title: '¡Ocurrio un problema!',
+          message: "Contacta con soporte por el error $excep",
+        );
       }finally{
+        _isSubmitting = false;
         notifyListeners();
       }
 
