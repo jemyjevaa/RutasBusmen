@@ -536,6 +536,7 @@ class _MapsViewState extends State<MapsView> {
 
                    _buildDrawerItem(
                     icon: Icons.error,
+                     visible: false,
                     title: AppStrings.get('lostObjects'),
                     onTap: () {
                       Navigator.pop(context);
@@ -564,6 +565,7 @@ class _MapsViewState extends State<MapsView> {
 
                    _buildDrawerItem(
                     icon: Icons.info,
+                    visible: false,
                     title: AppStrings.get('information'),
                       onTap: () {
                         setState(() {
@@ -924,7 +926,13 @@ class _MapsViewState extends State<MapsView> {
     Color? iconColor,
     Color? textColor,
     Widget? trailing,
+    bool visible = true,
   }) {
+
+    if (!visible) {
+      return const SizedBox.shrink(); // no ocupa espacio
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -971,6 +979,7 @@ class _MapsViewState extends State<MapsView> {
     required String title,
     required VoidCallback onTap,
   }) {
+
     return Container(
       margin: const EdgeInsets.only(left: 40, right: 12, top: 4, bottom: 4),
       decoration: BoxDecoration(
