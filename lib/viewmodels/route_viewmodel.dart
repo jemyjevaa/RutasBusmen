@@ -166,6 +166,15 @@ class RouteViewModel extends ChangeNotifier {
         // Fetch polyline from Google Directions
         await _fetchPolylineFromGoogle();
         
+        // Fallback: If Google Directions failed or returned no points, 
+        // use the stops themselves as the path (connect the dots)
+        if (_routePath.isEmpty && _routeStops.isNotEmpty) {
+          print('⚠️ Using straight line fallback for route path');
+          _routePath = _routeStops
+              .map((s) => RoutePathPoint(latitude: s.latitude, longitude: s.longitude))
+              .toList();
+        }
+        
       } else {
         print('No stops found for route $claveRuta (respuesta: false)');
       }

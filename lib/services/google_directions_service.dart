@@ -18,7 +18,25 @@ class GoogleDirectionsService {
       String waypoints = '';
       if (stops.length > 2) {
         final intermediate = stops.sublist(1, stops.length - 1);
-        final waypointsList = intermediate
+        
+        // Google Directions API limit is 25 waypoints total (origin + destination + 23 waypoints)
+        // If we have more, we need to sample them to avoid INVALID_REQUEST
+        List<RouteStopModel> waypointsToUse;
+        if (intermediate.length > 23) {
+          waypointsToUse = [];
+          // Always keep the approximate shape by sampling evenly
+          final step = intermediate.length / 23;
+          for (int i = 0; i < 23; i++) {
+            final index = (i * step).floor();
+            if (index < intermediate.length) {
+              waypointsToUse.add(intermediate[index]);
+            }
+          }
+        } else {
+          waypointsToUse = intermediate;
+        }
+        
+        final waypointsList = waypointsToUse
             .map((s) => 'via:${s.latitude},${s.longitude}')
             .toList();
         

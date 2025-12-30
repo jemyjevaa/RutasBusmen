@@ -1127,40 +1127,42 @@ class _MapsViewState extends State<MapsView> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                if (selectedRouteDetail != null || selectedRouteGroupName != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.arrow_back_ios, size: 20),
-                                      onPressed: () {
-                                        setSheetState(() {
-                                          if (selectedRouteDetail != null) {
-                                            if (_selectedRouteTab == 2 && selectedRouteGroupName != null) {
-                                              selectedRouteDetail = null;
-                                            } else {
-                                              selectedRouteDetail = null;
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  if (selectedRouteDetail != null || selectedRouteGroupName != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8.0),
+                                      child: IconButton(
+                                        icon: const Icon(Icons.arrow_back_ios, size: 20),
+                                        onPressed: () {
+                                          setSheetState(() {
+                                            if (selectedRouteDetail != null) {
+                                                selectedRouteDetail = null;
+                                            } else if (selectedRouteGroupName != null) {
+                                              selectedRouteGroupName = null;
                                             }
-                                          } else if (selectedRouteGroupName != null) {
-                                            selectedRouteGroupName = null;
-                                          }
-                                        });
-                                      },
-                                      color: primaryOrange,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
+                                          });
+                                        },
+                                        color: primaryOrange,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ),
+                                  Flexible(
+                                    child: Text(
+                                      title,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
-                                Text(
-                                  title,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.close),
