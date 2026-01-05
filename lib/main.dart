@@ -5,6 +5,7 @@ import 'package:geovoy_app/views/maps_view.dart';
 import 'package:provider/provider.dart';
 import 'services/UserSession.dart';
 import 'views/login_screen.dart';
+import 'views/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +33,9 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           scaffoldBackgroundColor: const Color(0xFFF5F5F7),
         ),
-        home: session.isLogin ? const MapsView() : const LoginScreen(),
+        home: SplashScreen(
+          child: session.isLogin ? const MapsView() : const LoginScreen(),
+        ),
       ),
     );
   }
