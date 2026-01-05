@@ -33,6 +33,13 @@ class UserSession {
   String? get token => _prefs?.getString('token');
   set token(String? value) => _prefs?.setString('token', value ?? '');
 
+  String? get textQR => _prefs?.getString('textQR');
+  set textQR(String? value) => _prefs?.setString('textQR', value ?? '');
+
+  String get nameQR => _prefs?.getString('nameQR') ?? '';
+  set nameQR(String value) => _prefs?.setString('nameQR', value);
+
+
   // endregion persist data user
 
   // region Login Data
@@ -88,6 +95,5 @@ class UserSession {
     _prefs?.remove("userData");
     _prefs?.remove("companyData");
     isLogin = false;
-    // setUserData(null);
   }
 }

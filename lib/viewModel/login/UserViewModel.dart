@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../services/RequestServ.dart';
 import '../../../services/ResponseServ.dart';
 import '../../../services/UserSession.dart';
+import '../../views/widgets/BuildQrProfileWidget.dart';
 
 class User {
   final String username;
@@ -88,6 +90,7 @@ class LoginViewModel extends ChangeNotifier {
 
       session.setUserData(response!.usuario.toJson());
       session.setCompanyData(response.empresa.toJson());
+      session.textQR = response.empresa.clave;
 
       // print("empresa => ${response.empresa.toJson()}");
       // print("getCompanyData => ${session.getCompanyData()}");
@@ -103,5 +106,36 @@ class LoginViewModel extends ChangeNotifier {
 
 
   }
+
+
+  Widget buildSafeQRCodeLogin(String data) {
+    if (data.isEmpty) {
+      return Icon(
+        Icons.qr_code_2,
+        size: 120,
+        color: Colors.grey[300],
+      );
+    }
+
+    return Center(
+      child: Column(
+        children: [
+          Text("Nombre: ${UserSession().nameQR}"),
+          const SizedBox(height: 6),
+          Center(
+            child: QrImageView(
+              data: data,
+              version: QrVersions.auto,
+              size: 240,
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+
+
+
 }
 

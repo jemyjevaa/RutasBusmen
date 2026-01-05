@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../services/UserSession.dart';
 import '../viewModel/login/UserViewModel.dart';
 import 'maps_view.dart';
-
 import '../utils/app_strings.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -422,7 +422,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                                       IconButton(
                                         onPressed: () {
-                                          // Aquí pones la lógica para cambiar idioma
                                         },
                                         icon: Icon(
                                           Icons.language,
@@ -522,6 +521,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
 
                             const SizedBox(height: 20),
+
+                            qrMercadoLibreButton(
+                              context: context,
+                              viewModel: vm,
+                            ),
                           ],
                         );
                       },
@@ -532,6 +536,195 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ],
         ),
-      );
+    );
   }
+
+  Widget qrMercadoLibreButton({
+    required BuildContext context,
+    required LoginViewModel viewModel,
+  }) {
+    print("=> ${UserSession().textQR}");
+    if (UserSession().textQR == null || UserSession().textQR!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.qr_code),
+      label: const Text('Ver QR'),
+      onPressed: () => _showUserQRSheet(),
+    );
+  }
+
+  void _showUserQRSheet() {
+
+    String userName = UserSession().nameQR.toString()!;
+    String userId = UserSession().textQR!;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 34),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Pase de Acceso',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                  border: Border.all(color: const Color(0xFFE2E8F0)), // Borde gris claro
+                ),
+                child: Column(
+                  children: [
+
+                  Container(
+                  height: 6,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E293B), // Navy Blue (Color Primario)
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                      children: [
+
+                  Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF1E293B).withOpacity(0.05),
+                  ),
+                  child: const Icon(Icons.person, size: 48, color: Color(0xFF1E293B)),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  userName,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'PERSONAL AUTORIZADO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Divider(height: 1),
+              const SizedBox(height: 24),
+
+
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: QrImageView(
+                  data: userId,
+                  version: QrVersions.auto,
+                  size: 160,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Colors.black,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                userId,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontFamily: 'Monospace',
+                  color: Color(0xFF64748B),
+                  letterSpacing: 3,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        ],
+      ),
+    ),
+    const SizedBox(height: 24),
+    Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+    Icon(Icons.nfc, size: 16, color: Colors.grey[500]),
+    const SizedBox(width: 8),
+    Text(
+    'Acerca al lector para registrar entrada',
+    style: TextStyle(
+    color: Colors.grey[600],
+    fontSize: 12,
+    ),
+    ),
+    ],
+    ),
+    ],
+    ),
+    ),
+    ),
+    );
+  }
+
 }
