@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
+import '../services/UserSession.dart';
 import '../services/auth_service.dart';
+
+import '../views/widgets/BuildQrProfileWidget.dart';
 
 enum LoginState {
   initial,
@@ -147,4 +150,32 @@ class LoginViewModel extends ChangeNotifier {
     _authService.dispose();
     super.dispose();
   }
+
+
+  void openQrMercadoLibreSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        final qr = UserSession().textQR;
+
+        if (qr == null || qr.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text('No hay QR registrado'),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: buildSafeQRCode(qr),
+        );
+      },
+    );
+  }
+
 }

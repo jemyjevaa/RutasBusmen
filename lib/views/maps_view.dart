@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:geovoy_app/services/ResponseServ.dart';
 import 'package:geovoy_app/views/login_screen.dart';
 import 'package:geovoy_app/views/widgets/BuildImgWidget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/UserSession.dart';
 import 'notifications_view.dart';
 import 'profile_view.dart';
@@ -83,21 +87,33 @@ class _MapsViewState extends State<MapsView> {
   void initState() {
     super.initState();
     _loadBusIcon();
+
+    print("Init app");
+    final mercadoLibre = "mercadolibregdl";
+    final mercadoLibre2 = "mercadolibregdl2";
     
     // Configure API with company data
-    final company = session.getCompanyData();
-    final user = session.getUserData();
+    final company = session.getCompanyData()!;
+    final user = session.getUserData()!;
+
+    if( company.clave == mercadoLibre || company.clave == mercadoLibre2 ){
+      UserSession().textQR = user.idCli.toString();
+      UserSession().nameQR = user.nombre;
+    }else{
+      UserSession().textQR = null;
+      UserSession().nameQR = "";
+    }
+
+    logDeviceInfo();
     
-    if (company != null && company.clave.isNotEmpty) {
+    if (company.clave.isNotEmpty) {
       ApiConfig.setEmpresa(company.clave);
       print('🏢 Configured API for company: ${company.clave}');
     }
     
-    if (user != null) {
-      ApiConfig.setIdUsuario(user.id);
-      print('👤 Configured API for user ID: ${user.id}');
-    }
-    
+    ApiConfig.setIdUsuario(user.id);
+    print('👤 Configured API for user ID: ${user.id}');
+
     // No tracking service initialization needed
     
     // Fetch routes when view loads
@@ -107,12 +123,69 @@ class _MapsViewState extends State<MapsView> {
     });
   }
 
-  // Start polling for units (called when route is selected)
-  // Removed: _startPollingUnits, _fetchUnits - Moved to RouteViewModel
+  // region information
+  Future<void> logDeviceInfo() async {
+    final company = session.getCompanyData()!;
+    final user = session.getUserData()!;
+    final deviceInfo = DeviceInfoPlugin();
+    final packageInfo = await PackageInfo.fromPlatform();
+    final prefs = await SharedPreferences.getInstance();
 
-  // Update all markers on the map
-  // Update all markers on the map
-  // Helper to generate markers from ViewModel data
+    // app_install_id → UUID persistente por instalación
+    String? appInstallId = prefs.getString('app_install_id');
+    if (appInstallId == null) {
+      appInstallId = _generateUuid();
+      await prefs.setString('app_install_id', appInstallId);
+    }
+
+    String deviceId = "unknown";
+    String brand = "unknown";
+    String model = "unknown";
+    String platform = Platform.isAndroid ? "android" : "ios";
+    String osVersion = "unknown";
+
+    if (Platform.isAndroid) {
+      final android = await deviceInfo.androidInfo;
+      deviceId = android.id;
+      brand = android.manufacturer;
+      model = android.model;
+      osVersion = "Android ${android.version.release}";
+    }
+
+    if (Platform.isIOS) {
+      final ios = await deviceInfo.iosInfo;
+      deviceId = ios.identifierForVendor ?? "unknown";
+      brand = "Apple";
+      model = ios.model;
+      osVersion = "iOS ${ios.systemVersion}";
+    }
+
+    final app = "app_new";
+    final appVersion = packageInfo.version;
+
+    print("""
+      DEVICE_INFO =>
+      device_id: $deviceId
+      app_install_id: $appInstallId
+      brand: $brand
+      model: $model
+      platform: $platform
+      os_version: $osVersion
+      app: $app
+      app_version: $appVersion
+      id_company: ${company.id}
+      nombre: ${user.nombre}
+      usuarios_cli_id: ${user.id}
+      """);
+  }
+
+  String _generateUuid() {
+    return DateTime.now().microsecondsSinceEpoch.toString() +
+        "-" +
+        (100000 + (DateTime.now().millisecondsSinceEpoch % 900000)).toString();
+  }
+
+
   Set<Marker> _generateMarkers(RouteViewModel viewModel) {
     final newMarkers = <Marker>{};
     
@@ -140,10 +213,7 @@ class _MapsViewState extends State<MapsView> {
         },
       ));
     }
-    
-    // Add stop markers
-    // We can use the static _stopMarkers set or generate them from viewModel.routeStops
-    // Using viewModel.routeStops is more reactive
+
     for (var stop in viewModel.routeStops) {
        newMarkers.add(Marker(
           markerId: MarkerId('stop_${stop.id}'),

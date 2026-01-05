@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:screen_protector/screen_protector.dart';
 import 'package:geovoy_app/services/UserSession.dart';
 import 'package:geovoy_app/views/widgets/BuildQrProfileWidget.dart';
 import '../utils/app_strings.dart';
@@ -14,11 +17,31 @@ class _ProfileViewState extends State<ProfileView> {
   static const Color primaryOrange = Color(0xFFFF6B35);
 
   final session = UserSession();
+  final mercadoLibre = "mercadolibregdl";
+  final mercadoLibre2 = "mercadolibregdl2";
 
   // Datos del usuario (temporales)
   late final String? userName = session.getUserData()?.nombre;//'User Name';
   late final String? userEmail = session.getUserData()?.email; //'user@email.com';
   late final String? supportPhone = session.getCompanyData()?.telefonos;//'+52 123 456 7890';
+
+  // mercadolibregdl
+  @override
+  void initState() {
+    super.initState();
+
+    if(session.getCompanyData()?.clave == mercadoLibre || session.getCompanyData()?.clave == mercadoLibre2 ){
+      ScreenProtector.preventScreenshotOn();
+    }
+  }
+
+  @override
+  void dispose() {
+    if(session.getCompanyData()?.clave == mercadoLibre || session.getCompanyData()?.clave == mercadoLibre2 ){
+      ScreenProtector.preventScreenshotOff();
+    }
+    super.dispose();
+  }
 
   late String? qr_text = session.getUserData()?.idCli.toString();
 
