@@ -32,8 +32,8 @@ class ApiService {
         defaultHeaders.addAll(headers);
       }
 
-      print('🌐 POST Request to: $url');
-      print('📦 Body: $body');
+      // print('🌐 POST Request to: $url');
+      // print('📦 Body: $body');
 
       final response = await _client.post(
         url,
@@ -41,8 +41,8 @@ class ApiService {
         body: isUrlEncoded ? body : jsonEncode(body),
       );
 
-      print('📡 Response Status: ${response.statusCode}');
-      print('📄 Response Body: ${response.body}');
+      // print('📡 Response Status: ${response.statusCode}');
+      // print('📄 Response Body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body) as Map<String, dynamic>;

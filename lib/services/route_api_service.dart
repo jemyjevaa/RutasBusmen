@@ -11,7 +11,7 @@ class RouteApiService {
   // Simple method to get units with live positions
   Future<List<UnitLocation>> getUnitsForRoute(String empresa, String claveRuta) async {
     try {
-      print('🔍 Fetching units for route: $claveRuta, empresa: $empresa');
+      // print('🔍 Fetching units for route: $claveRuta, empresa: $empresa');
       
       // Get unit assignments
       final url = Uri.parse('${ApiConfig.baseUrl}/unidadDeRuta');
@@ -24,8 +24,8 @@ class RouteApiService {
         }),
       ).timeout(const Duration(seconds: 30));
 
-      print('📡 Response status: ${response.statusCode}');
-      
+      // print('📡 Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['respuesta'] == true && data['data'] != null) {
@@ -216,7 +216,7 @@ class RouteApiService {
   Future<List<int>> fetchDeviceIdsForRoute(String claveRuta) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.unidadDeRuta}');
-      print('🔍 Fetching device IDs for route: $claveRuta');
+      // print('🔍 Fetching device IDs for route: $claveRuta');
       
       final response = await http.post(
         url,
@@ -251,7 +251,7 @@ class RouteApiService {
             }
           }
           
-          print('✅ Found ${deviceIds.length} device ID(s) for route $claveRuta: $deviceIds');
+          // print('✅ Found ${deviceIds.length} device ID(s) for route $claveRuta: $deviceIds');
           return deviceIds.toList();
         }
       }
@@ -260,6 +260,7 @@ class RouteApiService {
     }
     return [];
   }
+
   /// Fetch route path (waypoints) from the API
   Future<List<Map<String, dynamic>>> fetchRoutePath(String claveRuta) async {
     try {

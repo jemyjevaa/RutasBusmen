@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:geovoy_app/services/ResponseServ.dart';
 import 'package:geovoy_app/views/login_screen.dart';
 import 'package:geovoy_app/views/widgets/BuildImgWidget.dart';
+import 'package:geovoy_app/views/widgets/UnitTimeUser.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/RequestServ.dart';
 import '../services/UserSession.dart';
 import 'notifications_view.dart';
 import 'profile_view.dart';
@@ -88,7 +90,6 @@ class _MapsViewState extends State<MapsView> {
     super.initState();
     _loadBusIcon();
 
-    print("Init app");
     final mercadoLibre = "mercadolibregdl";
     final mercadoLibre2 = "mercadolibregdl2";
     
@@ -108,11 +109,9 @@ class _MapsViewState extends State<MapsView> {
     
     if (company.clave.isNotEmpty) {
       ApiConfig.setEmpresa(company.clave);
-      print('🏢 Configured API for company: ${company.clave}');
     }
     
     ApiConfig.setIdUsuario(user.id);
-    print('👤 Configured API for user ID: ${user.id}');
 
     // No tracking service initialization needed
     
@@ -125,6 +124,7 @@ class _MapsViewState extends State<MapsView> {
 
   // region information
   Future<void> logDeviceInfo() async {
+
     final company = session.getCompanyData()!;
     final user = session.getUserData()!;
     final deviceInfo = DeviceInfoPlugin();
@@ -163,20 +163,37 @@ class _MapsViewState extends State<MapsView> {
     final app = "app_new";
     final appVersion = packageInfo.version;
 
-    print("""
-      DEVICE_INFO =>
-      device_id: $deviceId
-      app_install_id: $appInstallId
-      brand: $brand
-      model: $model
-      platform: $platform
-      os_version: $osVersion
-      app: $app
-      app_version: $appVersion
-      id_company: ${company.id}
-      nombre: ${user.nombre}
-      usuarios_cli_id: ${user.id}
-      """);
+    final serv = RequestServ.instance;
+
+    final urlTest = "https://rutasbusmen.geovoy.com/api/actividad-usuarios-app";
+
+    try{
+
+      // var response = await serv.handlingRequestParsed(
+      //   urlParam: urlTest,
+      //   params: {
+      //     "usuarios_cli_id": user.idCli,
+      //     "nombre": user.nombre,
+      //     "device_id": deviceId,
+      //     "app_install_id": appInstallId,
+      //     "brand": brand,
+      //     "model": model,
+      //     "platform": platform,
+      //     "os_version": osVersion,
+      //     "app": "app_new",
+      //     "app_version": appVersion,
+      //     "id_company": company.id
+      //   },
+      //   method: 'POST',
+      //   asJson: false,
+      //   fromJson: (json) => json,
+      //   urlFull: true,
+      // );
+      // print("=> $response");
+    }catch(e){
+      print("ERROR REG => $e");
+    }finally{}
+
   }
 
   String _generateUuid() {
@@ -322,7 +339,7 @@ class _MapsViewState extends State<MapsView> {
       if (units.length == 1) {
         // Single unit - center on it
         final unit = units.first;
-        print('📍 Centering camera on single unit at ${unit.latitude}, ${unit.longitude}');
+        // print('📍 Centering camera on single unit at ${unit.latitude}, ${unit.longitude}');
         
         controller.animateCamera(
           CameraUpdate.newLatLngZoom(
@@ -332,7 +349,7 @@ class _MapsViewState extends State<MapsView> {
         );
       } else {
         // Multiple units - fit bounds
-        print('📍 Fitting bounds for ${units.length} units');
+        // print('📍 Fitting bounds for ${units.length} units');
         
         double minLat = units.first.latitude;
         double maxLat = units.first.latitude;
@@ -393,7 +410,7 @@ class _MapsViewState extends State<MapsView> {
   // Removed: _getNextStopName - Moved to RouteViewModel
 
   void _onRouteSelected(RouteData route) {
-    print('🎯 Route selected: ${route.claveRuta} - ${route.displayName}');
+    // print('🎯 Route selected: ${route.claveRuta} - ${route.displayName}');
     
     setState(() {
       _currentSelectedRoute = route;
@@ -413,14 +430,14 @@ class _MapsViewState extends State<MapsView> {
   // Fetch route stops (paradas)
   Future<void> _fetchRouteStops(RouteData route) async {
     try {
-      print('🚏 Fetching stops for route: ${route.claveRuta}');
+      // print('🚏 Fetching stops for route: ${route.claveRuta}');
       final viewModel = context.read<RouteViewModel>();
       await viewModel.fetchStopsForRoute(route.claveRuta);
       
       // Get the stops from the viewmodel
       final stops = viewModel.routeStops;
       if (stops.isNotEmpty) {
-        print('✅ Received ${stops.length} stops');
+        // print('✅ Received ${stops.length} stops');
         // _createStopMarkers(stops); // Removed
         
         // Center camera on stops if no units yet
@@ -466,7 +483,7 @@ class _MapsViewState extends State<MapsView> {
         
         // Add polyline for the route path if available
         if (viewModel.routePath.isNotEmpty) {
-           print('🛣️ Drawing polyline with ${viewModel.routePath.length} points');
+           // print('🛣️ Drawing polyline with ${viewModel.routePath.length} points');
            final points = viewModel.routePath.map((p) => LatLng(p.latitude, p.longitude)).toList();
            
            // Ensure we create a new Set to trigger rebuild
@@ -481,9 +498,10 @@ class _MapsViewState extends State<MapsView> {
                 endCap: Cap.roundCap,
               )
            };
-        } else {
-           print('⚠️ No route path points available to draw polyline. RouteStops: ${viewModel.routeStops.length}');
         }
+        // else {
+        //    print('⚠️ No route path points available to draw polyline. RouteStops: ${viewModel.routeStops.length}');
+        // }
         
         // Generate markers dynamically
         final markers = _generateMarkers(viewModel);
@@ -886,7 +904,7 @@ class _MapsViewState extends State<MapsView> {
                                   builder: (context, viewModel, child) {
                                     return Text(
                                       viewModel.isUnitInRoute && viewModel.currentDestination.isNotEmpty
-                                          ? 'Dirigiéndose a: ${viewModel.currentDestination}'
+                                          ? 'Dirigiéndose : ${viewModel.currentDestination}'
                                           : 'Ruta fuera de horario',
                                       style: TextStyle(
                                         fontSize: 11,
@@ -900,6 +918,8 @@ class _MapsViewState extends State<MapsView> {
                             ),
                           ],
                         ),
+                        timeUnitToUser(viewModel)
+
                       ],
                     ),
                   ),
@@ -1435,7 +1455,7 @@ class _MapsViewState extends State<MapsView> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                _onRouteSelected(route); // Use new method
+                _onRouteSelected(route);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('${AppStrings.get('selected')} ${route.displayName}')),

@@ -13,6 +13,7 @@ enum LoginState {
 }
 
 class LoginViewModel extends ChangeNotifier {
+
   final AuthService _authService;
   
   LoginViewModel({AuthService? authService}) 
@@ -65,7 +66,6 @@ class LoginViewModel extends ChangeNotifier {
       _setState(LoginState.loading);
       _errorMessage = null;
 
-      print('🔐 Starting login process...');
       
       final user = await _authService.login(
         email: email.trim(),
@@ -74,16 +74,13 @@ class LoginViewModel extends ChangeNotifier {
 
       _user = user;
       _setState(LoginState.success);
-      
-      print('✅ Login successful!');
+
       return true;
     } on AuthException catch (e) {
-      print('❌ Auth error: ${e.message}');
       _errorMessage = _getLocalizedErrorMessage(e.message);
       _setState(LoginState.error);
       return false;
     } catch (e) {
-      print('❌ Unexpected error: $e');
       _errorMessage = 'Error inesperado. Por favor intenta de nuevo.';
       _setState(LoginState.error);
       return false;
@@ -116,7 +113,6 @@ class LoginViewModel extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print('Error checking saved session: $e');
       return false;
     }
   }

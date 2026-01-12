@@ -48,15 +48,15 @@ class AuthService {
     try {
       final body = {
         'correo': email,
-        'password': password, // Swift usa 'password' en validateUser, 'contraseña' era error mío o de otra versión
+        'password': password,
         'idempresa': idEmpresa,
       };
 
       final response = await _apiService.post(
         endpoint: ApiConstants.validarUsuario,
-        baseUrl: ApiConstants.baseUrlOptions, // Usa URL Options
+        baseUrl: ApiConstants.baseUrlOptions,
         body: body,
-        isUrlEncoded: false, // JSON por defecto
+        isUrlEncoded: false,
       );
       
       return ValidateUserResponse.fromJson(response);
@@ -70,21 +70,19 @@ class AuthService {
     try {
       final response = await _apiService.postWithHeaders(
         endpoint: ApiConstants.sesionGps,
-        baseUrl: ApiConstants.baseUrl2, // Usa URL Options/Rastreo
+        baseUrl: ApiConstants.baseUrl2,
         body: {
           'email': ApiConstants.gpsEmail,
           'password': ApiConstants.gpsPassword,
         },
-        isUrlEncoded: true, // Este SÍ es UrlEncoded
+        isUrlEncoded: true,
       );
       
       // Extraer cookie del header 'set-cookie'
       final cookie = response.headers['set-cookie'];
       if (cookie != null) {
-        // La cookie puede venir con atributos extra (Path, HttpOnly, etc).
-        // A veces solo necesitamos la parte inicial hasta el punto y coma.
-        // Pero guardaremos todo por si acaso, o la primera parte.
-        // Swift: UserDefaults.standard.setValue(str, forKey: "Cookie")
+
+        // print('Cookie received: $cookie');
         return cookie;
       }
       
@@ -102,7 +100,7 @@ class AuthService {
   }) async {
     try {
       // 1. Validar dominio
-      print('🔐 Step 1: Validating domain ($email)...');
+      // print('🔐 Step 1: Validating domain ($email)...');
       final domainResponse = await validateDomain(email);
       
       if (domainResponse.datos.isEmpty) {
@@ -110,19 +108,19 @@ class AuthService {
       }
       
       final idEmpresa = domainResponse.datos.first.id;
-      print('✅ Domain validated. Company ID: $idEmpresa');
+      // print('✅ Domain validated. Company ID: $idEmpresa');
 
       // 2. Validar empresa
-      print('🔐 Step 2: Validating company...');
+      // print('🔐 Step 2: Validating company...');
       final companyResponse = await validateCompany(idEmpresa);
       
       if (companyResponse.respuesta.isEmpty) {
         throw AuthException('Empresa no válida');
       }
-      print('✅ Company validated');
+      // print('✅ Company validated');
 
       // 3. Validar usuario
-      print('🔐 Step 3: Validating user...');
+      // print('🔐 Step 3: Validating user...');
       final userResponse = await validateUser(
         email: email,
         password: password,
@@ -134,14 +132,16 @@ class AuthService {
       }
       
       final userData = userResponse.datos.first;
-      print('✅ User validated');
+      // print('✅ User validated');
 
       // 4. Iniciar sesión GPS
-      print('🔐 Step 4: Initializing GPS session...');
+      // print('🔐 Step 4: Initializing GPS session...');
       final cookie = await initGpsSession();
+      // print(cookie);
       if (cookie.isNotEmpty) {
+
         await _saveCookie(cookie);
-        print('✅ GPS session initialized');
+        // print('✅ GPS session initialized');
       }
 
       // 5. Guardar datos del usuario
@@ -154,10 +154,10 @@ class AuthService {
       );
       
       await _saveUser(user);
-      print('✅ Login completed successfully');
+      // print('✅ Login completed successfully');
       return user;
     } catch (e) {
-      print('❌ Login failed: $e');
+      // print('❌ Login failed: $e');
       if (e is AuthException) rethrow;
       throw AuthException('Error en el proceso de login: ${e.toString()}');
     }

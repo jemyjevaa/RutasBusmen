@@ -56,7 +56,7 @@ class GoogleDirectionsService {
       }
 
       final url = Uri.https('maps.googleapis.com', '/maps/api/directions/json', queryParams);
-      print('🗺️ Requesting Google Directions: $url');
+      // print('🗺️ Requesting Google Directions: $url');
 
       final response = await http.get(url);
 

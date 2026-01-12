@@ -27,8 +27,7 @@ class RouteViewModel extends ChangeNotifier {
 
   
   List<RouteData> get frequentRoutes {
-    // TODO: Implement user-specific frequent routes
-    // For now, return first 2 routes as "frequent"
+
     return _allRoutes.take(2).toList();
   }
 
@@ -148,7 +147,7 @@ class RouteViewModel extends ChangeNotifier {
 
   /// Fetch stops for a specific route
   Future<void> fetchStopsForRoute(String claveRuta) async {
-    print('Fetching stops for route: $claveRuta'); // DEBUG LOG
+    // print('Fetching stops for route: $claveRuta'); // DEBUG LOG
     _isLoadingStops = true;
     _routeStops = []; // Clear previous stops
     _routePath = []; // Clear previous path
@@ -159,7 +158,7 @@ class RouteViewModel extends ChangeNotifier {
       
       if (response.respuesta) {
         _routeStops = response.data;
-        print('Loaded ${_routeStops.length} stops'); // DEBUG LOG
+        // print('Loaded ${_routeStops.length} stops'); // DEBUG LOG
         // Sort by order if available
         _routeStops.sort((a, b) => (a.orden ?? 0).compareTo(b.orden ?? 0));
         
@@ -169,7 +168,7 @@ class RouteViewModel extends ChangeNotifier {
         // Fallback: If Google Directions failed or returned no points, 
         // use the stops themselves as the path (connect the dots)
         if (_routePath.isEmpty && _routeStops.isNotEmpty) {
-          print('⚠️ Using straight line fallback for route path');
+          // print('⚠️ Using straight line fallback for route path');
           _routePath = _routeStops
               .map((s) => RoutePathPoint(latitude: s.latitude, longitude: s.longitude))
               .toList();
@@ -198,14 +197,16 @@ class RouteViewModel extends ChangeNotifier {
   List<UnitLocation> _units = [];
   bool _isUnitInRoute = false;
   String _currentDestination = '';
+  String _timeUnitUser = '00';
   
   List<UnitLocation> get units => _units;
   bool get isUnitInRoute => _isUnitInRoute;
   String get currentDestination => _currentDestination;
+  String get timeUnitUser => _timeUnitUser;
 
   /// Start tracking a route
   void startTracking(RouteData route) {
-    print('🚀 Starting tracking for route: ${route.claveRuta}');
+    // print('🚀 Starting tracking for route: ${route.claveRuta}');
     stopTracking(); // Stop any existing tracking
     
     // Initial fetch
@@ -276,6 +277,7 @@ class RouteViewModel extends ChangeNotifier {
         // Update banner with next stop info
         if (_routeStops.isNotEmpty) {
            _currentDestination = _getNextStopName(_units.first);
+           // Get time unit are to user
         } else {
            _currentDestination = route.displayName;
         }
@@ -316,7 +318,8 @@ class RouteViewModel extends ChangeNotifier {
     
     if (closestStopIndex != -1) {
       final stop = _routeStops[closestStopIndex];
-      return 'UNIDAD ${unit.clave} : PARADA ${stop.numeroParada ?? (closestStopIndex + 1)} ${stop.name}';
+      // return 'UNIDAD ${unit.clave} : PARADA ${stop.numeroParada ?? (closestStopIndex + 1)} ${stop.name}';
+      return ' PARADA ${stop.numeroParada ?? (closestStopIndex + 1)} ${stop.name}';
     }
     
     return '';

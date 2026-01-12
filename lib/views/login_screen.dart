@@ -12,9 +12,12 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
+
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+
+
   static const Color primaryOrange = Color(0xFFFF6B35);
 
   final TextEditingController _emailController = TextEditingController();
@@ -481,18 +484,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                   // Botón recuperar contraseña
                                   Center(
-                                    child: TextButton(
-                                      onPressed: () {
-                                        // Aquí la lógica para recuperar contraseña
-                                      },
-                                      child: Text(
-                                        'Recuperar contraseña',
-                                        style: TextStyle(
-                                          fontSize: isTabletOrDesktop ? 18 : 14,
-                                          color: const Color(0xFF007AFF),
-                                        ),
-                                      ),
+                                    child: qrMercadoLibreButton(
+                                      context: context,
+                                      viewModel: vm,
                                     ),
+                                    // child: TextButton(
+                                    //   onPressed: () {
+                                    //     // Aquí la lógica para recuperar contraseña
+                                    //   },
+                                    //   child: Text(
+                                    //     'Recuperar contraseña',
+                                    //     style: TextStyle(
+                                    //       fontSize: isTabletOrDesktop ? 18 : 14,
+                                    //       color: const Color(0xFF007AFF),
+                                    //     ),
+                                    //   ),
+                                    // ),
                                   ),
                                 ],
                               ),
@@ -520,12 +527,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
 
-                            const SizedBox(height: 20),
-
-                            qrMercadoLibreButton(
-                              context: context,
-                              viewModel: vm,
-                            ),
                           ],
                         );
                       },
