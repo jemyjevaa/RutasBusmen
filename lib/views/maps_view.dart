@@ -42,6 +42,7 @@ class _MapsViewState extends State<MapsView> {
 
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>();
+  
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   static CameraPosition kGooglePlex = const CameraPosition(
@@ -341,12 +342,14 @@ class _MapsViewState extends State<MapsView> {
         final unit = units.first;
         // print('📍 Centering camera on single unit at ${unit.latitude}, ${unit.longitude}');
         
-        controller.animateCamera(
+        await controller.animateCamera(
           CameraUpdate.newLatLngZoom(
             LatLng(unit.latitude, unit.longitude),
             15.0,
           ),
         );
+        // Show InfoWindow by default
+        controller.showMarkerInfoWindow(MarkerId('unit_${unit.id}'));
       } else {
         // Multiple units - fit bounds
         // print('📍 Fitting bounds for ${units.length} units');
@@ -363,7 +366,7 @@ class _MapsViewState extends State<MapsView> {
           if (unit.longitude > maxLng) maxLng = unit.longitude;
         }
         
-        controller.animateCamera(
+        await controller.animateCamera(
           CameraUpdate.newLatLngBounds(
             LatLngBounds(
               southwest: LatLng(minLat, minLng),
@@ -372,6 +375,10 @@ class _MapsViewState extends State<MapsView> {
             50, // padding
           ),
         );
+        // Show InfoWindow for the first unit in the list as default
+        if (units.isNotEmpty) {
+           controller.showMarkerInfoWindow(MarkerId('unit_${units.first.id}'));
+        }
       }
       
       _hasCenteredOnUnits = true;

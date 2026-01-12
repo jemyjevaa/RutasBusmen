@@ -166,7 +166,7 @@ class RouteViewModel extends ChangeNotifier {
         await _fetchPolylineFromGoogle();
         
         // Fallback: If Google Directions failed or returned no points, 
-        // use the stops themselves as the path (connect the dots)
+        // use the dots themselves as the path (connect the dots)
         if (_routePath.isEmpty && _routeStops.isNotEmpty) {
           // print('⚠️ Using straight line fallback for route path');
           _routePath = _routeStops
@@ -198,7 +198,7 @@ class RouteViewModel extends ChangeNotifier {
   bool _isUnitInRoute = false;
   String _currentDestination = '';
   String _timeUnitUser = '00';
-  
+
   List<UnitLocation> get units => _units;
   bool get isUnitInRoute => _isUnitInRoute;
   String get currentDestination => _currentDestination;
@@ -208,10 +208,10 @@ class RouteViewModel extends ChangeNotifier {
   void startTracking(RouteData route) {
     // print('🚀 Starting tracking for route: ${route.claveRuta}');
     stopTracking(); // Stop any existing tracking
-    
+
     // Initial fetch
     _fetchUnits(route);
-    
+
     // Poll every 3 seconds
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _fetchUnits(route);
@@ -239,18 +239,22 @@ class RouteViewModel extends ChangeNotifier {
         notifyListeners();
         return;
       }
-      
+
       final session = UserSession();
       final empresa = session.getCompanyData()?.clave ?? 'lyondellbasell';
-      
+
       // Use the existing _apiService
       final units = await _apiService.getUnitsForRoute(empresa, route.claveRuta);
-      
+
       _units = units;
-      
+
+      double unitLat = 0.0;
+      double unitLon = 0.0;
+
+
       if (units.isNotEmpty) {
         _isUnitInRoute = true;
-        
+
         // Enrich unit data with real-time position from Traccar
         for (var i = 0; i < _units.length; i++) {
            final unit = _units[i];
@@ -263,6 +267,8 @@ class RouteViewModel extends ChangeNotifier {
                final positionData = await _apiService.getDevicePosition(positionId);
                if (positionData != null) {
                  // Update unit with real-time data
+                 unitLat = positionData['latitude'] as double? ?? unit.latitude;
+                 unitLon = positionData['longitude'] as double? ?? unit.longitude;
                  _units[i] = unit.copyWith(
                    latitude: positionData['latitude'] as double? ?? unit.latitude,
                    longitude: positionData['longitude'] as double? ?? unit.longitude,
@@ -273,24 +279,46 @@ class RouteViewModel extends ChangeNotifier {
              }
            }
         }
-        
+
         // Update banner with next stop info
         if (_routeStops.isNotEmpty) {
            _currentDestination = _getNextStopName(_units.first);
-           // Get time unit are to user
+           
+           // Safe position fetching to prevent crashes on Android
+           Position? userPosition = await _determinePosition();
+
+           if (userPosition != null) {
+             int minutes = calculateTimeBetweenUnitToUser(
+               unitLat, unitLon,
+               userPosition.latitude, userPosition.longitude
+             );
+             _timeUnitUser = minutes.toString().padLeft(2, '0');
+           } else {
+             _timeUnitUser = '00';
+           }
         } else {
            _currentDestination = route.displayName;
         }
       } else {
         _isUnitInRoute = false;
         _currentDestination = 'Sin unidades asignadas';
+        _timeUnitUser = '00';
       }
-      
+
       notifyListeners();
-      
+
     } catch (e) {
       print('❌ Error fetching units: $e');
     }
+  }
+
+  /// Calculate estimated time in minutes between two points
+  int calculateTimeBetweenUnitToUser(double lat1, double lon1, double lat2, double lon2) {
+    double distanceInMeters = Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+    // Average speed 30 km/h = 8.33 m/s
+    double averageSpeedMps = 8.33;
+    double timeInSeconds = distanceInMeters / averageSpeedMps;
+    return (timeInSeconds / 60).round();
   }
 
   /// Calculate next stop for the unit
@@ -325,8 +353,43 @@ class RouteViewModel extends ChangeNotifier {
     return '';
   }
 
+  /// Determina la posición actual del dispositivo manejando permisos y servicios.
+  Future<Position?> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Verificar si los servicios de ubicación están habilitados.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return null;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return null;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      return null;
+    } 
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+    } catch (e) {
+      // Fallback a la última posición conocida si falla el timeout o hay error
+      return await Geolocator.getLastKnownPosition();
+    }
+  }
+
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     super.dispose();
   }
 }
