@@ -134,7 +134,7 @@ class TrackingService {
       
       if (response.respuesta) {
         _routeStopsController.add(response.data);
-        print('🚏 Loaded ${response.data.length} stops for route $routeKey');
+        // print('🚏 Loaded ${response.data.length} stops for route $routeKey');
       }
     } catch (e) {
       print('⚠️ Error fetching route stops: $e');

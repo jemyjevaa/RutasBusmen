@@ -23,6 +23,7 @@ class RequestServ {
     Map<String, dynamic>? params,
     String method = "GET",
     bool asJson = false,
+    urlFull = false
   }) async {
     try {
       // Decide base URL
@@ -32,7 +33,7 @@ class RequestServ {
       //     urlParam == urlUnitAsiggned;
 
       final base = baseUrlNor; //isNormUrl ? baseUrlNor : baseUrlAdm;
-      String fullUrl = base + urlParam;
+      String fullUrl = urlFull? urlParam :base + urlParam;
 
       http.Response response;
       // print("=> $fullUrl");
@@ -101,9 +102,9 @@ class RequestServ {
         Map<String, dynamic>? params,
         String method = "GET",
         bool asJson = false,
-        required T Function(dynamic json) fromJson}) async {
+        required T Function(dynamic json) fromJson, urlFull = false} ) async {
     final responseString = await handlingRequest(
-        urlParam: urlParam, params: params, method: method, asJson: asJson);
+        urlParam: urlParam, params: params, method: method, asJson: asJson, urlFull: urlFull);
 
     if (responseString == null) return null;
 

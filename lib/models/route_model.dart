@@ -89,7 +89,7 @@ class RouteData {
     final now = DateTime.now();
     final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     
-    print('⏰ Schedule check: Current=$currentTime, Start=$horaInicioRuta, End=$horaFinRuta');
+    // print('⏰ Schedule check: Current=$currentTime, Start=$horaInicioRuta, End=$horaFinRuta');
     
     // Parse times for proper comparison
     try {
@@ -102,7 +102,7 @@ class RouteData {
       final endMinutes = end.hour * 60 + end.minute;
       
       final isActive = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-      print('⏰ Is active: $isActive (current: $currentMinutes, start: $startMinutes, end: $endMinutes)');
+      // print('⏰ Is active: $isActive (current: $currentMinutes, start: $startMinutes, end: $endMinutes)');
       
       return isActive;
     } catch (e) {

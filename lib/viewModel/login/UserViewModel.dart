@@ -85,8 +85,8 @@ class LoginViewModel extends ChangeNotifier {
         asJson: true,
         fromJson: (json) => ApiResLogin.fromJson(json),
       );
-      session.clear();
-      // print("=> ${response?.respuesta??false}");
+      // session.clear();
+      print("=> ${response?.empresa}");
 
       session.setUserData(response!.usuario.toJson());
       session.setCompanyData(response.empresa.toJson());
