@@ -88,9 +88,12 @@ class LoginViewModel extends ChangeNotifier {
       // session.clear();
       print("=> ${response?.empresa}");
 
-      session.setUserData(response!.usuario.toJson());
-      session.setCompanyData(response.empresa.toJson());
+      await session.setUserData(response!.usuario.toJson());
+      await session.setCompanyData(response.empresa.toJson());
       session.textQR = response.empresa.clave;
+      session.lastCompanyClave = response.empresa.clave;
+      session.nameQR = response.usuario.nombre;
+      session.qrTimestamp = DateTime.now().millisecondsSinceEpoch;
 
       // print("empresa => ${response.empresa.toJson()}");
       // print("getCompanyData => ${session.getCompanyData()}");

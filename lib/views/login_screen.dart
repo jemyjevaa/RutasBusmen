@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:screen_protector/screen_protector.dart';
 
 import '../services/UserSession.dart';
 import '../viewModel/login/UserViewModel.dart';
@@ -30,6 +31,10 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     session.clear();
+    
+    // Asegurar que las capturas estén permitidas al volver al login
+    ScreenProtector.preventScreenshotOff();
+    
     _emailController.text = session.isPersist ? session.email ?? '' : '';
     _pwdController.text = session.isPersist ? session.token ?? '' : '';
   }
@@ -423,15 +428,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                       ),
-                                      IconButton(
-                                        onPressed: () {
-                                        },
-                                        icon: Icon(
-                                          Icons.language,
-                                          color: Colors.grey,
-                                          size: isTabletOrDesktop ? 28 : 24,
-                                        ),
-                                      ),
                                     ],
                                   ),
                                   SizedBox(height: isTabletOrDesktop ? 25 : 20),
@@ -544,188 +540,247 @@ class _LoginScreenState extends State<LoginScreen> {
     required BuildContext context,
     required LoginViewModel viewModel,
   }) {
-    print("=> ${UserSession().textQR}");
     if (UserSession().textQR == null || UserSession().textQR!.isEmpty) {
       return const SizedBox.shrink();
     }
 
+    final bool isExpired = UserSession().isQRExpired();
+
     return ElevatedButton.icon(
-      icon: const Icon(Icons.qr_code),
-      label: const Text('Ver QR'),
-      onPressed: () => _showUserQRSheet(),
+      onPressed: isExpired 
+        ? () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Tu pase ha vencido. Por favor, inicia sesión nuevamente.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+        : () => _showUserQRSheet(),
+      icon: Icon(
+        isExpired ? Icons.history_rounded : Icons.qr_code_scanner_rounded, 
+        size: 20, 
+        color: Colors.white
+      ),
+      label: Text(
+        isExpired ? 'PASE VENCIDO (RE-INICIAR)' : 'VER MI PASE DE ACCESO',
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          letterSpacing: 0.5,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isExpired ? Colors.grey[700] : const Color(0xFF1E293B),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 2,
+        minimumSize: const Size(200, 50),
+      ),
     );
   }
 
-  void _showUserQRSheet() {
+  Future<void> _showUserQRSheet() async {
+    final mercadoLibre = "mercadolibregdl";
+    final mercadoLibre2 = "mercadolibregdl2";
+    final companyClave = UserSession().getCompanyData()?.clave ?? UserSession().lastCompanyClave;
+    final isMercadoLibre = companyClave == mercadoLibre || companyClave == mercadoLibre2;
 
     String userName = UserSession().nameQR.toString()!;
     String userId = UserSession().textQR!;
+
+    // Solo activar protección si es Mercado Libre
+    if (isMercadoLibre) {
+      await ScreenProtector.preventScreenshotOn();
+    } else {
+      await ScreenProtector.preventScreenshotOff();
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFF8F9FA),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 34),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Pase de Acceso',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
+      builder: (context) => WillPopScope(
+        onWillPop: () async {
+          await ScreenProtector.preventScreenshotOff();
+          return true;
+        },
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 34),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                  ],
-                  border: Border.all(color: const Color(0xFFE2E8F0)), // Borde gris claro
-                ),
-                child: Column(
-                  children: [
-
-                  Container(
-                  height: 6,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF1E293B), // Navy Blue (Color Primario)
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                      children: [
-
-                  Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFF1E293B).withOpacity(0.05),
-                  ),
-                  child: const Icon(Icons.person, size: 48, color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 16),
-
-                Text(
-                  userName,
+                const SizedBox(height: 24),
+                const Text(
+                  'Pase de Acceso',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF0F172A),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 24),
+
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'PERSONAL AUTORIZADO',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B),
-                    letterSpacing: 1,
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 6,
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF1E293B),
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF1E293B).withOpacity(0.05),
+                              ),
+                              child: const Icon(Icons.person, size: 48, color: Color(0xFF1E293B)),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'PERSONAL AUTORIZADO',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            const Divider(height: 1),
+                            const SizedBox(height: 24),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: QrImageView(
+                                data: userId,
+                                version: QrVersions.auto,
+                                size: 160,
+                                backgroundColor: Colors.white,
+                                eyeStyle: const QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: Colors.black,
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.square,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              userId,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontFamily: 'Monospace',
+                                color: Color(0xFF64748B),
+                                letterSpacing: 3,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              const Divider(height: 1),
-              const SizedBox(height: 24),
-
-
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.timer_outlined, size: 16, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Vigencia restante: ${UserSession().getDaysRemaining()} días',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                child: QrImageView(
-                  data: userId,
-                  version: QrVersions.auto,
-                  size: 160,
-                  backgroundColor: Colors.white,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.square,
-                    color: Colors.black,
-                  ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.square,
-                    color: Colors.black,
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.nfc, size: 16, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Acerca al lector para registrar entrada',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                userId,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontFamily: 'Monospace',
-                  color: Color(0xFF64748B),
-                  letterSpacing: 3,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        ],
       ),
-    ),
-    const SizedBox(height: 24),
-    Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-    Icon(Icons.nfc, size: 16, color: Colors.grey[500]),
-    const SizedBox(width: 8),
-    Text(
-    'Acerca al lector para registrar entrada',
-    style: TextStyle(
-    color: Colors.grey[600],
-    fontSize: 12,
-    ),
-    ),
-    ],
-    ),
-    ],
-    ),
-    ),
-    ),
-    );
+    ).then((_) {
+      // Siempre desactivar al cerrar por seguridad
+      ScreenProtector.preventScreenshotOff();
+    });
   }
 
 }

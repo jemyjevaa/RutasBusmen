@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:screen_protector/screen_protector.dart';
 import 'package:geovoy_app/viewModel/login/UserViewModel.dart';
 import 'package:geovoy_app/viewmodels/route_viewmodel.dart';
 import 'package:geovoy_app/views/maps_view.dart';
@@ -9,6 +10,14 @@ import 'views/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Asegurar que las capturas de pantalla estén habilitadas por defecto al iniciar
+  try {
+    await ScreenProtector.preventScreenshotOff();
+  } catch (e) {
+    print("Error inicializando ScreenProtector: $e");
+  }
+
   final session = UserSession();
   await session.init();
 

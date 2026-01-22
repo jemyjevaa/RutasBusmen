@@ -14,9 +14,9 @@ class ApiResLogin {
 
   factory ApiResLogin.fromJson(Map<String, dynamic> json) {
     return ApiResLogin(
-      respuesta: json['respuesta'] ?? false,
-      usuario: Usuario.fromJson(json['usuario']),
-      empresa: Empresa.fromJson(json['empresa']),
+      respuesta: json['respuesta'] as bool? ?? false,
+      usuario: Usuario.fromJson(json['usuario'] as Map<String, dynamic>? ?? {}),
+      empresa: Empresa.fromJson(json['empresa'] as Map<String, dynamic>? ?? {}),
     );
   }
 }
@@ -197,10 +197,10 @@ class ApiResNotification {
 
   factory ApiResNotification.fromJson(Map<String, dynamic> json) {
     return ApiResNotification(
-      respuesta: json['respuesta'] as bool,
-      data: (json['data'] as List<dynamic>)
-          .map((item) => NotificationItem.fromJson(item))
-          .toList(),
+      respuesta: json['respuesta'] as bool? ?? false,
+      data: (json['data'] as List<dynamic>?)
+          ?.map((item) => NotificationItem.fromJson(item as Map<String, dynamic>))
+          .toList() ?? [],
     );
   }
 
@@ -229,10 +229,10 @@ class NotificationItem {
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
     return NotificationItem(
-      id: json['id'] as int,
-      titulo: json['titulo'] as String,
-      notificacion: json['notificacion'] as String,
-      fecha: json['fecha'] as String,
+      id: json['id'] as int? ?? 0,
+      titulo: json['titulo']?.toString() ?? '',
+      notificacion: json['notificacion']?.toString() ?? '',
+      fecha: json['fecha']?.toString() ?? '',
       isRead: json['isRead'] as bool? ?? false,
     );
   }
@@ -261,10 +261,10 @@ class ApiResUnitAssignedRoute {
 
   factory ApiResUnitAssignedRoute.fromJson(Map<String, dynamic> json) {
     return ApiResUnitAssignedRoute(
-      respuesta: json['respuesta'] ?? false,
-      data: (json['data'] as List<dynamic>? ?? [])
-          .map((item) => UnitAssigned.fromJson(item as Map<String, dynamic>))
-          .toList(),
+      respuesta: json['respuesta'] as bool? ?? false,
+      data: (json['data'] as List<dynamic>?)
+          ?.map((item) => UnitAssigned.fromJson(item as Map<String, dynamic>))
+          .toList() ?? [],
     );
   }
 }
@@ -289,14 +289,21 @@ class UnitAssigned {
   });
 
   factory UnitAssigned.fromJson(Map<String, dynamic> json) {
+    double parseDouble(dynamic value) {
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return UnitAssigned(
-      id: json['id'] ?? 0,
-      clave: json['clave'] ?? '',
-      idplataformagps: json['idplataformagps'] ?? 0,
-      positionId: json['positionId'] ?? 0,
-      category: json['category'] ?? '',
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
+      id: json['id'] as int? ?? 0,
+      clave: json['clave']?.toString() ?? '',
+      idplataformagps: json['idplataformagps']?.toString() ?? '',
+      positionId: json['positionId'] as int? ?? 0,
+      category: json['category']?.toString() ?? '',
+      latitude: parseDouble(json['latitude']),
+      longitude: parseDouble(json['longitude']),
     );
   }
 

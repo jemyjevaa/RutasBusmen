@@ -21,7 +21,7 @@ class _ProfileViewState extends State<ProfileView> {
   final mercadoLibre2 = "mercadolibregdl2";
 
   // Datos del usuario (temporales)
-  late final String? userName = session.getUserData()?.nombre;//'User Name';
+  late final String userName = session.formattedName;
   late final String? userEmail = session.getUserData()?.email; //'user@email.com';
   late final String? supportPhone = session.getCompanyData()?.telefonos;//'+52 123 456 7890';
 
@@ -29,17 +29,17 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   void initState() {
     super.initState();
-
-    if(session.getCompanyData()?.clave == mercadoLibre || session.getCompanyData()?.clave == mercadoLibre2 ){
+    final companyClave = session.getCompanyData()?.clave ?? session.lastCompanyClave;
+    if(companyClave == mercadoLibre || companyClave == mercadoLibre2 ){
       ScreenProtector.preventScreenshotOn();
+    } else {
+      ScreenProtector.preventScreenshotOff();
     }
   }
 
   @override
   void dispose() {
-    if(session.getCompanyData()?.clave == mercadoLibre || session.getCompanyData()?.clave == mercadoLibre2 ){
-      ScreenProtector.preventScreenshotOff();
-    }
+    ScreenProtector.preventScreenshotOff();
     super.dispose();
   }
 
@@ -47,161 +47,131 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppStrings.get('profile')),
-        backgroundColor: primaryOrange,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+    return WillPopScope(
+      onWillPop: () async {
+        await ScreenProtector.preventScreenshotOff();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(AppStrings.get('profile')),
+          backgroundColor: primaryOrange,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              await ScreenProtector.preventScreenshotOff();
+              if (mounted) Navigator.pop(context);
+            },
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+          titleTextStyle: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              
-              // Campos de información
-              Text(
-                AppStrings.get('personalInfo'),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Campo Usuario
-              _buildInfoCard(
-                icon: Icons.person_outline,
-                label: AppStrings.get('userLabel'),
-                value: userName,
-              ),
-              const SizedBox(height: 16),
-
-              // Campo Email
-              _buildInfoCard(
-                icon: Icons.email_outlined,
-                label: 'Email',
-                value: userEmail,
-              ),
-              const SizedBox(height: 16),
-
-              // Campo Teléfono de soporte
-              _buildInfoCard(
-                icon: Icons.phone_outlined,
-                label: AppStrings.get('supportPhone'),
-                value: supportPhone,
-              ),
-              const SizedBox(height: 32),
-
-              // Sección QR
-              Text(
-                AppStrings.get('qrCode'),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Espacio para QR
-              Center(
-                child: Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: primaryOrange.withOpacity(0.3),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                
+                // Campos de información
+                Text(
+                  AppStrings.get('personalInfo'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      buildSafeQRCode( qr_text! ),
-                      const SizedBox(height: 16),
-                      Text(
-                        AppStrings.get('qrCode'),
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[500],
-                          fontWeight: FontWeight.w500,
+                ),
+                const SizedBox(height: 20),
+  
+                // Campo Usuario
+                _buildInfoCard(
+                  icon: Icons.person_outline,
+                  label: AppStrings.get('userLabel'),
+                  value: userName,
+                ),
+                const SizedBox(height: 16),
+  
+                // Campo Email
+                _buildInfoCard(
+                  icon: Icons.email_outlined,
+                  label: 'Email',
+                  value: userEmail,
+                ),
+                const SizedBox(height: 16),
+  
+                // Campo Teléfono de soporte
+                _buildInfoCard(
+                  icon: Icons.phone_outlined,
+                  label: AppStrings.get('supportPhone'),
+                  value: supportPhone,
+                ),
+                const SizedBox(height: 32),
+  
+                // Sección QR
+                Text(
+                  AppStrings.get('qrCode'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+  
+                // Espacio para QR
+                Center(
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: primaryOrange.withOpacity(0.3),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // Botón Eliminar Cuenta
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text(AppStrings.get('deleteAccount')),
-                        content: Text(AppStrings.get('deleteAccountMsg')),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(AppStrings.get('cancel')),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              // Aquí iría la lógica de eliminación
-                              Navigator.pop(context);
-                            },
-                            child: Text(
-                              AppStrings.get('delete'),
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      ],
                     ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    AppStrings.get('deleteAccount'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (qr_text != null) buildSafeQRCode( qr_text! ),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppStrings.get('qrCode'),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[500],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+  
+                      ],
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
+                const SizedBox(height: 32),
+  
+                /*
+                // Botón Eliminar Cuenta
+                ...
+                */
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -263,7 +233,7 @@ class _ProfileViewState extends State<ProfileView> {
                 Text(
                   value!,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     color: Colors.black87,
                     fontWeight: FontWeight.w600,
                   ),
