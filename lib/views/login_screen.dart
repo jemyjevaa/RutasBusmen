@@ -304,12 +304,21 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Inicio de sesión',
-                                    style: TextStyle(
-                                      fontSize: isTabletOrDesktop ? 28 : 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Inicio de sesión',
+                                        style: TextStyle(
+                                          fontSize: isTabletOrDesktop ? 28 : 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      qrMercadoLibreButton(
+                                        context: context,
+                                        viewModel: vm,
+                                      ),
+                                    ],
                                   ),
                                   SizedBox(height: isTabletOrDesktop ? 25 : 20),
 
@@ -478,25 +487,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(height: 10),
 
-                                  // Botón recuperar contraseña
-                                  Center(
-                                    child: qrMercadoLibreButton(
-                                      context: context,
-                                      viewModel: vm,
-                                    ),
-                                    // child: TextButton(
-                                    //   onPressed: () {
-                                    //     // Aquí la lógica para recuperar contraseña
-                                    //   },
-                                    //   child: Text(
-                                    //     'Recuperar contraseña',
-                                    //     style: TextStyle(
-                                    //       fontSize: isTabletOrDesktop ? 18 : 14,
-                                    //       color: const Color(0xFF007AFF),
-                                    //     ),
-                                    //   ),
-                                    // ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -546,8 +536,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final bool isExpired = UserSession().isQRExpired();
 
-    return ElevatedButton.icon(
-      onPressed: isExpired 
+    return InkWell(
+      onTap: isExpired 
         ? () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -557,27 +547,39 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         : () => _showUserQRSheet(),
-      icon: Icon(
-        isExpired ? Icons.history_rounded : Icons.qr_code_scanner_rounded, 
-        size: 20, 
-        color: Colors.white
-      ),
-      label: Text(
-        isExpired ? 'PASE VENCIDO (RE-INICIAR)' : 'VER MI PASE DE ACCESO',
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          letterSpacing: 0.5,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isExpired ? Colors.grey[700] : const Color(0xFF1E293B),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isExpired ? Colors.grey[700] : const Color(0xFF1E293B),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isExpired ? Icons.history_rounded : Icons.qr_code_scanner_rounded, 
+              size: 20, 
+              color: Colors.white,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'QR',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
-        elevation: 2,
-        minimumSize: const Size(200, 50),
       ),
     );
   }
