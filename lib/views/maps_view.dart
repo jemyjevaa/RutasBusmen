@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:screen_protector/screen_protector.dart';
 import 'package:geovoy_app/services/ResponseServ.dart';
 import 'package:geovoy_app/views/login_screen.dart';
 import 'package:geovoy_app/views/widgets/BuildImgWidget.dart';
 import 'package:geovoy_app/views/widgets/UnitTimeUser.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -91,6 +93,11 @@ class _MapsViewState extends State<MapsView> {
     super.initState();
     _loadBusIcon();
 
+    // Asegurar que las capturas estén permitidas al entrar al mapa
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScreenProtector.preventScreenshotOff();
+    });
+
     final mercadoLibre = "mercadolibregdl";
     final mercadoLibre2 = "mercadolibregdl2";
     
@@ -101,9 +108,11 @@ class _MapsViewState extends State<MapsView> {
     if( company.clave == mercadoLibre || company.clave == mercadoLibre2 ){
       UserSession().textQR = user.idCli.toString();
       UserSession().nameQR = user.nombre;
+      UserSession().lastCompanyClave = company.clave;
     }else{
       UserSession().textQR = null;
       UserSession().nameQR = "";
+      UserSession().lastCompanyClave = null;
     }
 
     logDeviceInfo();
@@ -462,27 +471,28 @@ class _MapsViewState extends State<MapsView> {
 
   @override
   void dispose() {
-    // Check if mounted before accessing context
-    // However, in dispose() context might be unsafe to use for provider if the widget tree is dismantling
-    // But we need to stop the timer.
-    // A safer way is to let the ViewModel handle its own disposal if it was scoped, 
-    // but here it seems to be a higher level provider.
-    // We'll try to access it, but wrap in try-catch just in case.
-    try {
-      context.read<RouteViewModel>().stopTracking();
-    } catch (e) {
-      print('Error stopping tracking in dispose: $e');
-    }
+    // Stop tracking when leaving the view
+    // We shouldn't use the 'context' inside dispose() if the widget might already be deactivated.
+    // However, if the RouteViewModel is provided at a higher level, it will persist.
+    // If it was created within this view's context, it might already be disposed.
+    // A better approach is to use a reference to the viewmodel if possible, 
+    // or just let it be if it's managed by a global provider.
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-
+    // Forzar que las capturas estén permitidas en todo el mapa
+    ScreenProtector.preventScreenshotOff();
     Empresa? company = session.getCompanyData();
     Usuario? user = session.getUserData();
 
     String urlImg = company?.imagen.replaceAll(RegExp(r"\s+"), "%20") ?? 'assets/images/logos/LogoBusmen.png';
+    String userName = session.formattedName;
+    String userEmail = user?.email ?? '';
+
+    final companyClave = company?.clave ?? session.lastCompanyClave;
+    final isMercadoLibre = companyClave == "mercadolibregdl" || companyClave == "mercadolibregdl2";
 
     // Generate markers and polylines from route stops
     return Consumer<RouteViewModel>(
@@ -520,7 +530,9 @@ class _MapsViewState extends State<MapsView> {
            });
         }
         
-        return Scaffold(
+        return WillPopScope(
+          onWillPop: () async => false, // Evitar salir al login accidentalmente
+          child: Scaffold(
       key: _scaffoldKey,
       drawer: Drawer(
         child: Column(
@@ -543,42 +555,51 @@ class _MapsViewState extends State<MapsView> {
                   buildImage(urlImg),
                   const SizedBox(height: 16),
                   // Información del usuario
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          color: primaryOrange,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children:  [
-                          Text(
-                            user!.nombre,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            user!.email,
-                            style: TextStyle(
-                              fontSize: 13,
-                            ),
+                          child: const Icon(
+                            Icons.person,
+                            color: primaryOrange,
+                            size: 32,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children:  [
+                              Text(
+                                userName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13, // Reducido para que quepa el nombre completo
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                userEmail,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -793,6 +814,18 @@ class _MapsViewState extends State<MapsView> {
             ),
           ),
           
+          // Botón de Pase de Acceso rápido (Solo Mercado Libre)
+          if (isMercadoLibre)
+            Positioned(
+              left: 16,
+              top: MediaQuery.of(context).padding.top + 80, // Debajo del botón de menú
+              child: _buildFloatingButton(
+                icon: Icons.qr_code_2,
+                backgroundColor: const Color(0xFF1E293B),
+                onTap: _showUserQRSheet,
+              ),
+            ),
+          
           // FAB Menu en la parte inferior derecha
           Positioned(
             right: 16,
@@ -925,7 +958,7 @@ class _MapsViewState extends State<MapsView> {
                             ),
                           ],
                         ),
-                        timeUnitToUser(viewModel)
+                        timeUnitToUser(viewModel),
 
                       ],
                     ),
@@ -983,19 +1016,224 @@ class _MapsViewState extends State<MapsView> {
           ),
         ],
       ),
-    );
-      },
+    ),
+  );
+},
     );
   }
   
-  Widget _buildFloatingButton({required IconData icon, required VoidCallback onTap}) {
+  Future<void> _showUserQRSheet() async {
+    final mercadoLibre = "mercadolibregdl";
+    final mercadoLibre2 = "mercadolibregdl2";
+    final companyClave = session.getCompanyData()?.clave ?? session.lastCompanyClave;
+    final isMercadoLibre = companyClave == mercadoLibre || companyClave == mercadoLibre2;
+
+    String userName = UserSession().nameQR ?? 'Usuario';
+    String userId = UserSession().textQR ?? '';
+
+    // Solo activar protección si es Mercado Libre
+    if (isMercadoLibre) {
+      await ScreenProtector.preventScreenshotOn();
+    } else {
+      await ScreenProtector.preventScreenshotOff();
+    }
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => WillPopScope(
+        onWillPop: () async {
+          await ScreenProtector.preventScreenshotOff();
+          return true;
+        },
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 34),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Pase de Acceso',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 6,
+                        width: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF1E293B),
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF1E293B).withOpacity(0.05),
+                              ),
+                              child: const Icon(Icons.person, size: 48, color: Color(0xFF1E293B)),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              userName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'PERSONAL AUTORIZADO',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF64748B),
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            const Divider(height: 1),
+                            const SizedBox(height: 24),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: QrImageView(
+                                data: userId,
+                                version: QrVersions.auto,
+                                size: 160,
+                                backgroundColor: Colors.white,
+                                eyeStyle: const QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: Colors.black,
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.square,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              userId,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontFamily: 'Monospace',
+                                color: Color(0xFF64748B),
+                                letterSpacing: 3,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.timer_outlined, size: 16, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Vigencia restante: ${UserSession().getDaysRemaining()} días',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.nfc, size: 16, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Acerca al lector para registrar entrada',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).then((_) async {
+      // Siempre desactivar al cerrar por seguridad
+      await ScreenProtector.preventScreenshotOff();
+    });
+  }
+
+  Widget _buildFloatingButton({required IconData icon, required VoidCallback onTap, Color? backgroundColor}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: primaryOrange,
+          color: backgroundColor ?? primaryOrange,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -1357,108 +1595,117 @@ class _MapsViewState extends State<MapsView> {
   }
 
   Widget _buildRouteDetailView(RouteData route) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: primaryOrange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: primaryOrange.withOpacity(0.3)),
-            ),
-            child: Row(
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, color: primaryOrange),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Información de ${route.nombreRuta}',
-                    style: TextStyle(
-                      color: Colors.grey[800],
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: primaryOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: primaryOrange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: primaryOrange),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Información de ${route.nombreRuta}',
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 24),
+                
+                _buildInfoCard(
+                  icon: Icons.route,
+                  title: 'Clave de Ruta',
+                  value: route.claveRuta,
+                  color: Colors.blue,
+                ),
+                const SizedBox(height: 12),
+                
+                _buildInfoCard(
+                  icon: Icons.wb_sunny,
+                  title: 'Turno',
+                  value: route.turnoRuta,
+                  color: Colors.orange,
+                ),
+                const SizedBox(height: 12),
+                
+                _buildInfoCard(
+                  icon: Icons.navigation,
+                  title: 'Dirección',
+                  value: route.direccionRuta,
+                  color: Colors.green,
+                ),
+                const SizedBox(height: 12),
+                
+                _buildInfoCard(
+                  icon: Icons.access_time,
+                  title: 'Horario',
+                  value: route.timeRange,
+                  color: Colors.purple,
+                ),
+                const SizedBox(height: 12),
+                
+                _buildInfoCard(
+                  icon: Icons.category,
+                  title: 'Tipo de Ruta',
+                  value: route.tipoRuta,
+                  color: Colors.teal,
+                ),
+                const SizedBox(height: 24),
+                
+                Text(
+                  'Días de Operación',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: route.diaRuta.map((dia) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: primaryOrange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: primaryOrange.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      dia,
+                      style: const TextStyle(
+                        color: primaryOrange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )).toList(),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          
-          _buildInfoCard(
-            icon: Icons.route,
-            title: 'Clave de Ruta',
-            value: route.claveRuta,
-            color: Colors.blue,
-          ),
-          const SizedBox(height: 12),
-          
-          _buildInfoCard(
-            icon: Icons.wb_sunny,
-            title: 'Turno',
-            value: route.turnoRuta,
-            color: Colors.orange,
-          ),
-          const SizedBox(height: 12),
-          
-          _buildInfoCard(
-            icon: Icons.navigation,
-            title: 'Dirección',
-            value: route.direccionRuta,
-            color: Colors.green,
-          ),
-          const SizedBox(height: 12),
-          
-          _buildInfoCard(
-            icon: Icons.access_time,
-            title: 'Horario',
-            value: route.timeRange,
-            color: Colors.purple,
-          ),
-          const SizedBox(height: 12),
-          
-          _buildInfoCard(
-            icon: Icons.category,
-            title: 'Tipo de Ruta',
-            value: route.tipoRuta,
-            color: Colors.teal,
-          ),
-          const SizedBox(height: 24),
-          
-          Text(
-            'Días de Operación',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: route.diaRuta.map((dia) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: primaryOrange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: primaryOrange.withOpacity(0.3)),
-              ),
-              child: Text(
-                dia,
-                style: const TextStyle(
-                  color: primaryOrange,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            )).toList(),
-          ),
-          const SizedBox(height: 32),
-          
-          SizedBox(
+        ),
+        
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
@@ -1483,8 +1730,8 @@ class _MapsViewState extends State<MapsView> {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

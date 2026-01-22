@@ -15,10 +15,10 @@ class RouteResponse {
 
   factory RouteResponse.fromJson(Map<String, dynamic> json) {
     return RouteResponse(
-      respuesta: json['respuesta'] as bool,
-      data: (json['data'] as List<dynamic>)
-          .map((item) => RouteData.fromJson(item as Map<String, dynamic>))
-          .toList(),
+      respuesta: json['respuesta'] as bool? ?? false,
+      data: (json['data'] as List<dynamic>?)
+          ?.map((item) => RouteData.fromJson(item as Map<String, dynamic>))
+          .toList() ?? [],
     );
   }
 
@@ -56,17 +56,17 @@ class RouteData {
 
   factory RouteData.fromJson(Map<String, dynamic> json) {
     return RouteData(
-      id: json['id'] as int,
-      nombreRuta: json['nombre_ruta'] as String,
-      turnoRuta: json['turno_ruta'] as String,
-      direccionRuta: json['direccion_ruta'] as String,
-      claveRuta: json['clave_ruta'] as String,
-      diaRuta: (json['dia_ruta'] as List<dynamic>)
-          .map((item) => item as String)
-          .toList(),
-      horaInicioRuta: json['hora_inicio_ruta'] as String,
-      horaFinRuta: json['hora_fin_ruta'] as String,
-      tipoRuta: json['tipo_ruta'] as String,
+      id: (json['id'] is int) ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      nombreRuta: json['nombre_ruta']?.toString() ?? '',
+      turnoRuta: json['turno_ruta']?.toString() ?? '',
+      direccionRuta: json['direccion_ruta']?.toString() ?? '',
+      claveRuta: json['clave_ruta']?.toString() ?? '',
+      diaRuta: (json['dia_ruta'] as List<dynamic>?)
+          ?.map((item) => item?.toString() ?? '')
+          .toList() ?? [],
+      horaInicioRuta: json['hora_inicio_ruta']?.toString() ?? '',
+      horaFinRuta: json['hora_fin_ruta']?.toString() ?? '',
+      tipoRuta: json['tipo_ruta']?.toString() ?? '',
     );
   }
 

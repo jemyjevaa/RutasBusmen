@@ -37,7 +37,6 @@ class _AssistanceChatViewState extends State<AssistanceChatView> {
     setState(() {
       _currentOptions = [
         ChatOption(id: 'routes', text: 'Dudas sobre Rutas'),
-        ChatOption(id: 'lost_found', text: 'Objetos Perdidos'),
         ChatOption(id: 'app_issue', text: 'Problemas con la App'),
         ChatOption(id: 'contact', text: 'Contactar Soporte'),
       ];
@@ -63,8 +62,6 @@ class _AssistanceChatViewState extends State<AssistanceChatView> {
           _addBotMessage('Para ver las rutas, ve a la pantalla principal "Mapa".\n\nPuedes seleccionar:\n• Frecuentes: Tus rutas habituales\n• En Tiempo: Rutas activas ahora\n• Todas: Lista completa');
           _showReturnOptions();
           break;
-        case 'lost_found':
-          _addBotMessage('Si perdiste algo, puedes reportarlo en la sección "Objetos Perdidos" del menú lateral.\n\nNecesitarás indicar la ruta y fecha aproximada.');
           _showReturnOptions();
           break;
         case 'app_issue':

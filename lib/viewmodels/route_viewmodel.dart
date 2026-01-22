@@ -50,6 +50,7 @@ class RouteViewModel extends ChangeNotifier {
         _errorMessage = null;
       } else {
         _errorMessage = 'No se pudieron cargar las rutas';
+        _allRoutes = [];
       }
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');

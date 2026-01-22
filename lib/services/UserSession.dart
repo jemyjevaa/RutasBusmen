@@ -30,6 +30,10 @@ class UserSession {
   String? get email => _prefs?.getString('email');
   set email(String? value) => _prefs?.setString('email', value ?? '');
 
+  String get formattedName {
+    return getUserData()?.nombre ?? 'Usuario';
+  }
+
   String? get token => _prefs?.getString('token');
   set token(String? value) => _prefs?.setString('token', value ?? '');
 
@@ -38,6 +42,29 @@ class UserSession {
 
   String get nameQR => _prefs?.getString('nameQR') ?? '';
   set nameQR(String value) => _prefs?.setString('nameQR', value);
+
+  String? get lastCompanyClave => _prefs?.getString('lastCompanyClave');
+  set lastCompanyClave(String? value) => _prefs?.setString('lastCompanyClave', value ?? '');
+
+  int? get qrTimestamp => _prefs?.getInt('qrTimestamp');
+  set qrTimestamp(int? value) => _prefs?.setInt('qrTimestamp', value ?? 0);
+
+  bool isQRExpired() {
+    if (qrTimestamp == null || qrTimestamp == 0) return true;
+    final generationDate = DateTime.fromMillisecondsSinceEpoch(qrTimestamp!);
+    final now = DateTime.now();
+    final difference = now.difference(generationDate).inDays;
+    return difference >= 15;
+  }
+
+  int getDaysRemaining() {
+    if (qrTimestamp == null || qrTimestamp == 0) return 0;
+    final generationDate = DateTime.fromMillisecondsSinceEpoch(qrTimestamp!);
+    final expirationDate = generationDate.add(const Duration(days: 15));
+    final now = DateTime.now();
+    final difference = expirationDate.difference(now).inDays;
+    return difference < 0 ? 0 : difference;
+  }
 
 
   // endregion persist data user
