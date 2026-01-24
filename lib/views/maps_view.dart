@@ -38,7 +38,7 @@ class MapsView extends StatefulWidget {
   State<MapsView> createState() => _MapsViewState();
 }
 
-class _MapsViewState extends State<MapsView> {
+class _MapsViewState extends State<MapsView> with SingleTickerProviderStateMixin {
 
   final session = UserSession();
 
@@ -56,14 +56,12 @@ class _MapsViewState extends State<MapsView> {
   bool _isMapMenuExpanded = false;
   bool _isInfoExpanded = false;
   
-  // Direct polling properties (simplified)
-  // Removed: _apiService, _pollingTimer, _units, _currentDestination, _isUnitInRoute
-  // Now handled by RouteViewModel
+  // Animation for pulse effect
+  late AnimationController _pulseController;
   
   Set<Marker> _stopMarkers = {};    // Static stop markers
 
   RouteData? _currentSelectedRoute;
-  // Removed local markers state
   Set<Polyline> polylines = {};
   int _selectedRouteTab = 0; // 0: Frecuentes, 1: En Tiempo, 2: Todas
   BitmapDescriptor? _busIconMoving;
@@ -92,6 +90,15 @@ class _MapsViewState extends State<MapsView> {
   void initState() {
     super.initState();
     _loadBusIcon();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+
+    _pulseController.addListener(() {
+      setState(() {});
+    });
 
     // Asegurar que las capturas estén permitidas al entrar al mapa
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -123,8 +130,6 @@ class _MapsViewState extends State<MapsView> {
     
     ApiConfig.setIdUsuario(user.id);
 
-    // No tracking service initialization needed
-    
     // Fetch routes when view loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<RouteViewModel>();
@@ -178,28 +183,7 @@ class _MapsViewState extends State<MapsView> {
     final urlTest = "https://rutasbusmen.geovoy.com/api/actividad-usuarios-app";
 
     try{
-
-      // var response = await serv.handlingRequestParsed(
-      //   urlParam: urlTest,
-      //   params: {
-      //     "usuarios_cli_id": user.idCli,
-      //     "nombre": user.nombre,
-      //     "device_id": deviceId,
-      //     "app_install_id": appInstallId,
-      //     "brand": brand,
-      //     "model": model,
-      //     "platform": platform,
-      //     "os_version": osVersion,
-      //     "app": "app_new",
-      //     "app_version": appVersion,
-      //     "id_company": company.id
-      //   },
-      //   method: 'POST',
-      //   asJson: false,
-      //   fromJson: (json) => json,
-      //   urlFull: true,
-      // );
-      // print("=> $response");
+      // Logging logic
     }catch(e){
       print("ERROR REG => $e");
     }finally{}
@@ -228,6 +212,7 @@ class _MapsViewState extends State<MapsView> {
         icon: icon,
         rotation: unit.course ?? 0.0,
         anchor: const Offset(0.5, 0.5),
+        flat: true,
         infoWindow: InfoWindow(
           title: unit.clave,
           snippet: 'Velocidad: ${unit.speed?.toStringAsFixed(1) ?? 0} km/h',
@@ -254,6 +239,29 @@ class _MapsViewState extends State<MapsView> {
     }
     
     return newMarkers;
+  }
+
+  Set<Circle> _generateCircles(RouteViewModel viewModel) {
+    final circles = <Circle>{};
+    for (var unit in viewModel.units) {
+      if (unit.isInRoute) {
+        circles.add(Circle(
+          circleId: CircleId('pulse_outer_${unit.id}'),
+          center: LatLng(unit.latitude, unit.longitude),
+          radius: 15 + (_pulseController.value * 35),
+          fillColor: primaryOrange.withOpacity(0.3 * (1.0 - _pulseController.value)),
+          strokeWidth: 0,
+        ));
+        circles.add(Circle(
+          circleId: CircleId('pulse_inner_${unit.id}'),
+          center: LatLng(unit.latitude, unit.longitude),
+          radius: 10 + (_pulseController.value * 15),
+          fillColor: primaryOrange.withOpacity(0.5 * (1.0 - _pulseController.value)),
+          strokeWidth: 0,
+        ));
+      }
+    }
+    return circles;
   }
   
   // Handle panic button tap on unit marker
@@ -349,7 +357,6 @@ class _MapsViewState extends State<MapsView> {
       if (units.length == 1) {
         // Single unit - center on it
         final unit = units.first;
-        // print('📍 Centering camera on single unit at ${unit.latitude}, ${unit.longitude}');
         
         await controller.animateCamera(
           CameraUpdate.newLatLngZoom(
@@ -361,8 +368,6 @@ class _MapsViewState extends State<MapsView> {
         controller.showMarkerInfoWindow(MarkerId('unit_${unit.id}'));
       } else {
         // Multiple units - fit bounds
-        // print('📍 Fitting bounds for ${units.length} units');
-        
         double minLat = units.first.latitude;
         double maxLat = units.first.latitude;
         double minLng = units.first.longitude;
@@ -423,15 +428,9 @@ class _MapsViewState extends State<MapsView> {
     });
   }
   
-  // Removed: _getNextStopName - Moved to RouteViewModel
-
   void _onRouteSelected(RouteData route) {
-    // print('🎯 Route selected: ${route.claveRuta} - ${route.displayName}');
-    
     setState(() {
       _currentSelectedRoute = route;
-      // _stopMarkers = {}; // No longer needed
-      // markers = {}; // No longer needed
       _hasCenteredOnUnits = false; // Reset centering flag
     });
     
@@ -446,17 +445,12 @@ class _MapsViewState extends State<MapsView> {
   // Fetch route stops (paradas)
   Future<void> _fetchRouteStops(RouteData route) async {
     try {
-      // print('🚏 Fetching stops for route: ${route.claveRuta}');
       final viewModel = context.read<RouteViewModel>();
       await viewModel.fetchStopsForRoute(route.claveRuta);
       
       // Get the stops from the viewmodel
       final stops = viewModel.routeStops;
       if (stops.isNotEmpty) {
-        // print('✅ Received ${stops.length} stops');
-        // _createStopMarkers(stops); // Removed
-        
-        // Center camera on stops if no units yet
         final viewModel = context.read<RouteViewModel>();
         if (viewModel.units.isEmpty) {
           _fitBoundsToStops(stops);
@@ -471,12 +465,7 @@ class _MapsViewState extends State<MapsView> {
 
   @override
   void dispose() {
-    // Stop tracking when leaving the view
-    // We shouldn't use the 'context' inside dispose() if the widget might already be deactivated.
-    // However, if the RouteViewModel is provided at a higher level, it will persist.
-    // If it was created within this view's context, it might already be disposed.
-    // A better approach is to use a reference to the viewmodel if possible, 
-    // or just let it be if it's managed by a global provider.
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -498,27 +487,42 @@ class _MapsViewState extends State<MapsView> {
     return Consumer<RouteViewModel>(
       builder: (context, viewModel, child) {
         
+        Set<Polyline> allPolylines = {};
+
         // Add polyline for the route path if available
         if (viewModel.routePath.isNotEmpty) {
-           // print('🛣️ Drawing polyline with ${viewModel.routePath.length} points');
            final points = viewModel.routePath.map((p) => LatLng(p.latitude, p.longitude)).toList();
            
-           // Ensure we create a new Set to trigger rebuild
-           polylines = {
+           allPolylines.add(
              Polyline(
                 polylineId: const PolylineId('route_path'),
                 points: points,
-                color: primaryOrange,
-                width: 5,
+                color: primaryOrange.withOpacity(0.3),
+                width: 4,
                 jointType: JointType.round,
                 startCap: Cap.roundCap,
                 endCap: Cap.roundCap,
               )
-           };
+           );
         }
-        // else {
-        //    print('⚠️ No route path points available to draw polyline. RouteStops: ${viewModel.routeStops.length}');
-        // }
+
+        // Add "Trail" (Estela) for each unit
+        for (var unit in viewModel.units) {
+          if (unit.isInRoute) {
+            final trailPoints = viewModel.getHeadingTrail(unit.latitude, unit.longitude);
+            if (trailPoints.isNotEmpty) {
+              allPolylines.add(Polyline(
+                polylineId: PolylineId('unit_trail_${unit.id}'),
+                points: trailPoints,
+                color: Colors.blue,
+                width: 3,
+                jointType: JointType.round,
+                startCap: Cap.roundCap,
+                endCap: Cap.roundCap,
+              ));
+            }
+          }
+        }
         
         // Generate markers dynamically
         final markers = _generateMarkers(viewModel);
@@ -582,7 +586,7 @@ class _MapsViewState extends State<MapsView> {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 13, // Reducido para que quepa el nombre completo
+                                  fontSize: 13, 
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -701,7 +705,6 @@ class _MapsViewState extends State<MapsView> {
                       title: AppStrings.get('announcements'),
                       onTap: () {
                         Navigator.pop(context);
-                        // Navegar a Comunicados
                       },
                     ),
                     _buildDrawerSubItem(
@@ -709,7 +712,6 @@ class _MapsViewState extends State<MapsView> {
                       title: AppStrings.get('regulations'),
                       onTap: () {
                         Navigator.pop(context);
-                        // Navegar a Reglamentación
                       },
                     ),
                     _buildDrawerSubItem(
@@ -717,7 +719,6 @@ class _MapsViewState extends State<MapsView> {
                       title: AppStrings.get('userManual'),
                       onTap: () {
                         Navigator.pop(context);
-                        // Navegar a Manual
                       },
                     ),
                   ],
@@ -779,7 +780,8 @@ class _MapsViewState extends State<MapsView> {
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             markers: markers,
-            polylines: polylines,
+            polylines: allPolylines,
+            circles: _generateCircles(viewModel),
           ),
           
           // Botones flotantes en la parte superior
@@ -1413,17 +1415,6 @@ class _MapsViewState extends State<MapsView> {
 
   //Ventana de rutas
   void _showRouteSelectionSheet(BuildContext context) {
-    // Check if company is Busmen (or specific logic needed)
-    // For now, restoring the tabbed view for all, but checking if we need the "simple list" for others.
-    // The user said "para unas empresas me cambiaste el diseño".
-    // Usually Busmen uses the complex view (Tabs: Frecuentes, En Tiempo, Todas).
-    // Other companies might use a simple list.
-    
-    final isBusmen = ApiConfig.empresa == 'BUSMEN'; // Assuming 'BUSMEN' is the key, need to verify.
-    // Actually, let's look at what we have. The current implementation uses tabs for everyone.
-    // If the user says it changed for "some" companies, it implies others were different.
-    // I'll try to implement a check. If not Busmen, show simple list.
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1542,14 +1533,6 @@ class _MapsViewState extends State<MapsView> {
                           }),
                         )
                       else ...[
-                        // Navigation Tabs (Only if Busmen or specific logic)
-                        // If not Busmen, maybe we just show "All" routes directly?
-                        // Let's assume we want to show tabs only for Busmen, and simple list for others.
-                        // But wait, the user said "para unas empresas".
-                        // I'll stick to the tabs for now but ensure the "All" list is default if not Busmen?
-                        // Or maybe the issue is that I forced tabs where there shouldn't be.
-                        // Let's keep tabs but make sure they work.
-                        
                         Container(
                           margin: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -1575,9 +1558,7 @@ class _MapsViewState extends State<MapsView> {
                             } else {
                               final route = item as RouteData;
                               setSheetState(() {
-                                selectedRouteDetail = route; // Show detail first
-                                // Or select directly? The user might prefer direct selection.
-                                // Let's keep detail view as it provides more info.
+                                selectedRouteDetail = route;
                               });
                             }
                           }),
