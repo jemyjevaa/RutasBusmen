@@ -40,7 +40,7 @@ class MapsView extends StatefulWidget {
   State<MapsView> createState() => _MapsViewState();
 }
 
-class _MapsViewState extends State<MapsView> with WidgetsBindingObserver {
+class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, TickerProviderStateMixin {
 
   final session = UserSession();
 
@@ -435,7 +435,23 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver {
     });
   }
   
-  void _onRouteSelected(RouteData route) {
+  void _showNativeTutorial() {
+    Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (context, _, __) => NativeDisplayTutorial(
+          onComplete: () async {
+            final viewModel = context.read<RouteViewModel>();
+            Navigator.pop(context);
+            await viewModel.setTutorialShown(true);
+            await viewModel.syncBackgroundActivityState();
+          },
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _onRouteSelected(RouteData route) async {
     setState(() {
       _currentSelectedRoute = route;
       _hasCenteredOnUnits = false; // Reset centering flag
