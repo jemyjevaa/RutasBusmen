@@ -6,7 +6,9 @@ import '../models/route_stop_model.dart'; // Import RouteStopModel
 import '../viewmodels/route_viewmodel.dart'; // Import RouteViewModel
 
 class StopsView extends StatefulWidget {
-  const StopsView({super.key});
+  final RouteData? initialRoute;
+  
+  const StopsView({super.key, this.initialRoute});
 
   @override
   State<StopsView> createState() => _StopsViewState();
@@ -26,6 +28,14 @@ class _StopsViewState extends State<StopsView> {
       final viewModel = context.read<RouteViewModel>();
       if (viewModel.allRoutes.isEmpty) {
         viewModel.fetchRoutes();
+      }
+      
+      // If initialRoute is provided, set it and fetch stops
+      if (widget.initialRoute != null) {
+        setState(() {
+          _selectedRoute = widget.initialRoute;
+        });
+        viewModel.fetchStopsForRoute(widget.initialRoute!.claveRuta);
       }
     });
   }

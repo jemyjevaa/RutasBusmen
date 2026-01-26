@@ -990,25 +990,36 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
             left: 16,
             right: 90,
             bottom: 100,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+            child: GestureDetector(
+              onTap: () {
+                if (_currentSelectedRoute != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StopsView(initialRoute: _currentSelectedRoute),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(
+                        color: context.watch<RouteViewModel>().isUnitInRoute 
+                            ? Colors.green.withOpacity(0.5) 
+                            : Colors.orange.withOpacity(0.5),
+                    width: 1,
                   ),
-                ],
-                border: Border.all(
-                      color: context.watch<RouteViewModel>().isUnitInRoute 
-                          ? Colors.green.withOpacity(0.5) 
-                          : Colors.orange.withOpacity(0.5),
-                  width: 1,
                 ),
-              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1070,8 +1081,8 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                 ],
               ),
             ),
+            ),
           ),
-
           
           Positioned(
             left: 16,
