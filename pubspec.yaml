@@ -1,7 +1,7 @@
 name: geovoy_app
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.2+2
+version: 1.0.0+4
 
 environment:
   sdk: ^3.10.1
@@ -30,7 +30,7 @@ dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/backgrounds/icono.jpeg"
+  image_path: "assets/images/backgrounds/busmen_app.png"
 
 
 dev_dependencies:

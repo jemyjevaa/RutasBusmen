@@ -1,4 +1,5 @@
 import 'dart:async'; // For Timer
+import 'dart:math'; // For cos, sin
 import 'dart:io'; // For Platform check
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart'; // For distance calculation
@@ -297,12 +298,14 @@ class RouteViewModel extends ChangeNotifier {
   Timer? _pollingTimer;
   StreamSubscription<Position>? _backgroundLocationSubscription; // For iOS background persistence
   List<UnitLocation> _units = [];
+  final Map<int, List<LatLng>> _unitTrails = {}; // Track history of positions for each unit
   bool _isUnitInRoute = false;
   String _currentDestination = '';
   String _timeUnitUser = '00';
   RouteData? _currentRoute; 
 
   List<UnitLocation> get units => _units;
+  Map<int, List<LatLng>> get unitTrails => _unitTrails;
   bool get isUnitInRoute => _isUnitInRoute;
   String get currentDestination => _currentDestination;
   String get timeUnitUser => _timeUnitUser;
@@ -353,6 +356,7 @@ class RouteViewModel extends ChangeNotifier {
     _backgroundLocationSubscription = null;
 
     _units = [];
+    _unitTrails.clear();
     _isUnitInRoute = false;
     _currentDestination = '';
     _currentRoute = null;
@@ -369,6 +373,7 @@ class RouteViewModel extends ChangeNotifier {
       // Check if route is active (within schedule)
       if (!route.isActiveNow()) {
         _units = [];
+        _unitTrails.clear();
         _isUnitInRoute = false;
         _currentDestination = 'Fuera de horario';
         notifyListeners();
@@ -404,9 +409,13 @@ class RouteViewModel extends ChangeNotifier {
                  // Update unit with real-time data
                  unitLat = positionData['latitude'] as double? ?? unit.latitude;
                  unitLon = positionData['longitude'] as double? ?? unit.longitude;
+                 print("unitLat => $unitLat | unitLon => $unitLon");
+                 // Update trail history
+                 _updateUnitTrail(unit.id, unitLat, unitLon);
+
                  _units[i] = unit.copyWith(
-                   latitude: positionData['latitude'] as double? ?? unit.latitude,
-                   longitude: positionData['longitude'] as double? ?? unit.longitude,
+                   latitude: unitLat,
+                   longitude: unitLon,
                    speed: (positionData['speed'] as num?)?.toDouble() ?? 0.0,
                    course: (positionData['course'] as num?)?.toDouble() ?? 0.0,
                  );
@@ -467,6 +476,75 @@ class RouteViewModel extends ChangeNotifier {
     } catch (e) {
       print('❌ Error fetching units: $e');
     }
+  }
+
+  void _updateUnitTrail(int unitId, double lat, double lon) {
+    if (!_unitTrails.containsKey(unitId)) {
+      _unitTrails[unitId] = [];
+    }
+    final trail = _unitTrails[unitId]!;
+    final newPos = LatLng(lat, lon);
+    
+    // Only add if it's different from the last one to avoid duplicates
+    if (trail.isEmpty || (trail.last.latitude != lat || trail.last.longitude != lon)) {
+      trail.add(newPos);
+      // Limit trail length to last 50 points to preserve history better
+      if (trail.length > 50) {
+        trail.removeAt(0);
+      }
+    }
+  }
+
+  /// Calculate a point ahead of the unit based on its course (heading)
+  LatLng calculateHeadingPoint(double lat, double lon, double? course, {double distance = 0.002}) {
+    if (course == null) return LatLng(lat, lon);
+    
+    // Convert course to radians
+    final double angleRad = course * (pi / 180.0);
+    
+    // Calculate new position
+    // Note: Lat/Lon distance calculation is approximate but sufficient for small distances
+    final double dLat = distance * cos(angleRad);
+    final double dLon = distance * sin(angleRad) / cos(lat * pi / 180.0);
+    
+    return LatLng(lat + dLat, lon + dLon);
+  }
+
+  /// Get the remaining part of the route path from the unit's current position to the end
+  List<LatLng> getRemainingRoutePath(double unitLat, double unitLon) {
+    if (_routePath.isEmpty) return [];
+    
+    // Find index of the closest point on the route path
+    int closestIndex = 0;
+    double minDistance = double.infinity;
+    
+    for (int i = 0; i < _routePath.length; i++) {
+      double d = Geolocator.distanceBetween(
+        unitLat, unitLon,
+        _routePath[i].latitude, _routePath[i].longitude
+      );
+      if (d < minDistance) {
+        minDistance = d;
+        closestIndex = i;
+      }
+    }
+    
+    List<LatLng> result = [LatLng(unitLat, unitLon)];
+    // Add all points from the closest index onwards
+    for (int i = closestIndex; i < _routePath.length; i++) {
+      result.add(LatLng(_routePath[i].latitude, _routePath[i].longitude));
+    }
+    return result;
+  }
+
+  /// Obtiene una "estela" corta de los próximos puntos de la ruta
+  List<LatLng> getHeadingTrail(double unitLat, double unitLon) {
+    final fullPath = getRemainingRoutePath(unitLat, unitLon);
+    if (fullPath.length > 1) {
+      // Tomamos los primeros 8 puntos para crear una "estela" hacia adelante
+      return fullPath.take(8).toList();
+    }
+    return [];
   }
 
   /// Calculate estimated time in minutes between two points

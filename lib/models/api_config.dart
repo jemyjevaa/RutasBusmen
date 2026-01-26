@@ -23,8 +23,8 @@ class ApiConfig {
   static const String positionsEndpoint = '/positions';
   
   // Basic Auth Credentials (from Swift code)
-  static const String gpsUsername = 'usuariosapp';
-  static const String gpsPassword = 'usuarios0904';
+  static const String gpsUsername = 'desarrollo@geovoy.com' ;//'usuariosapp';
+  static const String gpsPassword = 'DesGeo122';//'usuarios0904';
   
   /// Set the current company (should be called after login)
   static void setEmpresa(String empresa) {
