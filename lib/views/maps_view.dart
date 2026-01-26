@@ -30,6 +30,8 @@ import 'package:geolocator/geolocator.dart'; // For distance calculation
 import '../models/api_config.dart';
 import '../services/route_api_service.dart'; // For direct API calls
 import '../services/panic_button_service.dart'; // For panic button
+import '../services/eta_native_service.dart'; // Added to fix compilation errors
+import 'widgets/NativeDisplayTutorial.dart'; // Added
 
 class MapsView extends StatefulWidget {
   const MapsView({super.key});
@@ -38,7 +40,7 @@ class MapsView extends StatefulWidget {
   State<MapsView> createState() => _MapsViewState();
 }
 
-class _MapsViewState extends State<MapsView> {
+class _MapsViewState extends State<MapsView> with WidgetsBindingObserver {
 
   final session = UserSession();
 
@@ -91,13 +93,18 @@ class _MapsViewState extends State<MapsView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadBusIcon();
 
     // Asegurar que las capturas estén permitidas al entrar al mapa
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       ScreenProtector.preventScreenshotOff();
+      
+      // Solicitar permisos de ubicación al inicio (independiente del tutorial)
+      final viewModel = context.read<RouteViewModel>();
+      await viewModel.requestLocationPermission();
+      await viewModel.refreshRoutes(); 
     });
-
     final mercadoLibre = "mercadolibregdl";
     final mercadoLibre2 = "mercadolibregdl2";
     
@@ -425,7 +432,23 @@ class _MapsViewState extends State<MapsView> {
   
   // Removed: _getNextStopName - Moved to RouteViewModel
 
-  void _onRouteSelected(RouteData route) {
+  void _showNativeTutorial() {
+    Navigator.of(context, rootNavigator: true).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (context, _, __) => NativeDisplayTutorial(
+          onComplete: () async {
+            final viewModel = context.read<RouteViewModel>();
+            Navigator.pop(context);
+            await viewModel.setTutorialShown(true);
+            await viewModel.syncBackgroundActivityState();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _onRouteSelected(RouteData route) async {
     // print('🎯 Route selected: ${route.claveRuta} - ${route.displayName}');
     
     setState(() {
@@ -441,6 +464,23 @@ class _MapsViewState extends State<MapsView> {
     
     // Fetch route stops
     _fetchRouteStops(route);
+
+    // Show tutorial for Android/iOS only on the very first time selection if permissions are missing
+    if (Platform.isAndroid || Platform.isIOS) {
+      final ETANativeService _etaService = ETANativeService();
+      bool hasPermissions = true;
+      if (Platform.isAndroid) {
+        hasPermissions = await _etaService.checkAndroidPermissions();
+      } else {
+        // For iOS, we check if tutorial was shown. 
+        // User wants it to show on first time.
+        hasPermissions = false; // Force show on first time if not shown
+      }
+      
+      if (!hasPermissions && !viewModel.hasShownNativeTutorial) {
+        _showNativeTutorial();
+      }
+    }
   }
 
   // Fetch route stops (paradas)
@@ -470,7 +510,17 @@ class _MapsViewState extends State<MapsView> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Sync background activity state when app returns from settings
+      final viewModel = context.read<RouteViewModel>();
+      viewModel.syncBackgroundActivityState();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // Stop tracking when leaving the view
     // We shouldn't use the 'context' inside dispose() if the widget might already be deactivated.
     // However, if the RouteViewModel is provided at a higher level, it will persist.
@@ -735,6 +785,55 @@ class _MapsViewState extends State<MapsView> {
                       );
                     },
                   ),
+                  _buildDrawerItem(
+                    icon: Icons.open_in_new,
+                    title: "Ver tiempo de unidad fuera de la app",
+                    trailing: Switch(
+                      value: viewModel.showETAOutsideApp,
+                      activeColor: primaryOrange,
+                      onChanged: (value) async {
+                        if (value && (Platform.isAndroid || Platform.isIOS)) {
+                           final ETANativeService _etaService = ETANativeService();
+                           bool hasPermissions = true;
+                           if (Platform.isAndroid) {
+                             hasPermissions = await _etaService.checkAndroidPermissions();
+                           } else {
+                             // For iOS, we always show tutorial if they haven't seen it 
+                             // and they are turning it ON from the switch.
+                             hasPermissions = viewModel.hasShownNativeTutorial;
+                           }
+                           
+                           if (!hasPermissions) {
+                             _showNativeTutorial();
+                           } else {
+                             viewModel.toggleShowETAOutsideApp(value);
+                           }
+                        } else {
+                          viewModel.toggleShowETAOutsideApp(value);
+                        }
+                      },
+                    ),
+                    onTap: () async {
+                      bool newValue = !viewModel.showETAOutsideApp;
+                      if (newValue && (Platform.isAndroid || Platform.isIOS)) {
+                        final ETANativeService _etaService = ETANativeService();
+                        bool hasPermissions = true;
+                        if (Platform.isAndroid) {
+                          hasPermissions = await _etaService.checkAndroidPermissions();
+                        } else {
+                          hasPermissions = viewModel.hasShownNativeTutorial;
+                        }
+
+                        if (!hasPermissions) {
+                          _showNativeTutorial();
+                        } else {
+                          viewModel.toggleShowETAOutsideApp(newValue);
+                        }
+                      } else {
+                        viewModel.toggleShowETAOutsideApp(newValue);
+                      }
+                    },
+                  ),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Divider(),
@@ -913,55 +1012,54 @@ class _MapsViewState extends State<MapsView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _currentSelectedRoute != null 
-                              ? _currentSelectedRoute!.displayName
-                              : AppStrings.get('noRouteSelected'),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          timeUnitToUser(viewModel),
+                          Text(
+                            _currentSelectedRoute != null 
+                                ? _currentSelectedRoute!.displayName
+                                : AppStrings.get('noRouteSelected'),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: context.watch<RouteViewModel>().isUnitInRoute ? Colors.green : Colors.orange,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                                child: Consumer<RouteViewModel>(
-                                  builder: (context, viewModel, child) {
-                                    return Text(
-                                      viewModel.isUnitInRoute && viewModel.currentDestination.isNotEmpty
-                                          ? 'Dirigiéndose : ${viewModel.currentDestination}'
-                                          : 'Ruta fuera de horario',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    );
-                                  },
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: context.watch<RouteViewModel>().isUnitInRoute ? Colors.green : Colors.orange,
+                                  shape: BoxShape.circle,
                                 ),
-                            ),
-                          ],
-                        ),
-                        timeUnitToUser(viewModel),
-
-                      ],
-                    ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                  child: Consumer<RouteViewModel>(
+                                    builder: (context, viewModel, child) {
+                                      return Text(
+                                        viewModel.isUnitInRoute && viewModel.currentDestination.isNotEmpty
+                                            ? 'Dirigiéndose : ${viewModel.currentDestination}'
+                                            : 'Ruta fuera de horario',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      );
+                                    },
+                                  ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                   ),
                   Icon(
                         context.watch<RouteViewModel>().isUnitInRoute ? Icons.navigation : Icons.schedule,
@@ -1536,8 +1634,8 @@ class _MapsViewState extends State<MapsView> {
                       else if (selectedRouteGroupName != null)
                         Expanded(
                           child: _buildRouteGroupDetailView(viewModel, selectedRouteGroupName!, (route) {
+                            Navigator.pop(context); // Pop sheet BEFORE selecting to avoid closing tutorial
                             _onRouteSelected(route);
-                            Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppStrings.get('selected')} ${route.displayName}')));
                           }),
                         )
@@ -1559,6 +1657,7 @@ class _MapsViewState extends State<MapsView> {
                           child: Row(
                             children: [
                               _buildTabItem(AppStrings.get('frequent'), 0, setSheetState),
+                              _buildTabItem("FAVORITAS", 3, setSheetState),
                               _buildTabItem(AppStrings.get('onTime'), 1, setSheetState),
                               _buildTabItem(AppStrings.get('all'), 2, setSheetState),
                             ],
@@ -1709,8 +1808,8 @@ class _MapsViewState extends State<MapsView> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
+                Navigator.pop(context); // Pop sheet BEFORE selecting to avoid closing tutorial
                 _onRouteSelected(route);
-                Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('${AppStrings.get('selected')} ${route.displayName}')),
                 );
@@ -1820,14 +1919,16 @@ class _MapsViewState extends State<MapsView> {
                 : [],
           ),
           child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey[600],
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[600],
+            fontWeight: FontWeight.bold,
+            fontSize: 10,
           ),
+        ),
         ),
       ),
     );
@@ -1921,12 +2022,28 @@ class _MapsViewState extends State<MapsView> {
               ),
               child: const Icon(Icons.directions_bus, color: primaryOrange),
             ),
-            title: Text(
-              route.displayName,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    route.displayName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    viewModel.isFavorite(route.id) ? Icons.favorite : Icons.favorite_border,
+                    color: viewModel.isFavorite(route.id) ? Colors.red : Colors.grey,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    viewModel.toggleFavorite(route);
+                  },
+                ),
+              ],
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1978,19 +2095,13 @@ class _MapsViewState extends State<MapsView> {
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isActive ? Colors.green.withOpacity(0.1) : Colors.grey[100],
+                color: isActive ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isActive ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
-                ),
               ),
-              child: Text(
-                route.turnoRuta,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isActive ? Colors.green : Colors.black87,
-                  fontSize: 12,
-                ),
+              child: Icon(
+                isActive ? Icons.play_arrow : Icons.lock_clock,
+                size: 14,
+                color: isActive ? Colors.green : Colors.orange,
               ),
             ),
             onTap: () => onItemTap(route),
