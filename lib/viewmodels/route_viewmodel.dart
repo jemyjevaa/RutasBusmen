@@ -1,5 +1,6 @@
 import 'dart:async'; // For Timer
 import 'dart:math'; // For cos, sin
+import 'dart:io'; // For Platform check
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart'; // For distance calculation
 import '../models/route_model.dart';
@@ -11,25 +12,116 @@ import '../models/route_path_point.dart';
 import '../models/api_config.dart'; // For ApiConfig
 import '../services/UserSession.dart'; // For UserSession
 import 'package:google_maps_flutter/google_maps_flutter.dart'; // For LatLng
+import '../services/eta_native_service.dart'; // For native ETA display
+import '../services/route_history_service.dart'; // Added
 
 /// ViewModel for managing route data and state
 class RouteViewModel extends ChangeNotifier {
   final RouteApiService _apiService = RouteApiService();
+  final ETANativeService _etaNativeService = ETANativeService();
+  final RouteHistoryService _historyService = RouteHistoryService();
 
   // State variables 
   List<RouteData> _allRoutes = [];
   bool _isLoading = false;
   String? _errorMessage;
 
-  
+  // Persistence state
+  List<int> _recentRouteIds = [];
+  List<int> _favoriteRouteIds = [];
+  bool _showETAOutsideApp = false;
+  bool _hasShownNativeTutorial = false;
+  bool _isActivatingFeature = false; // Flag to auto-enable when perms granted
+
   List<RouteData> get allRoutes => _allRoutes;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get showETAOutsideApp => _showETAOutsideApp;
+  bool get hasShownNativeTutorial => _hasShownNativeTutorial;
 
-  
+  void toggleShowETAOutsideApp(bool value) async {
+    if (value && Platform.isAndroid) {
+      bool hasPermissions = await _etaNativeService.checkAndroidPermissions();
+      if (!hasPermissions) {
+        // If trying to enable without permissions, we don't update state here
+        // The View layer should handle showing the tutorial
+        return;
+      }
+    }
+    
+    _showETAOutsideApp = value;
+    if (!value) {
+      _etaNativeService.stopETADisplay();
+    }
+    _historyService.setShowETAPreference(value);
+    notifyListeners();
+  }
+
+  /// Sync the feature state with actual system permissions
+  Future<void> syncBackgroundActivityState() async {
+    if (Platform.isAndroid) {
+      bool hasPermissions = await _etaNativeService.checkAndroidPermissions();
+      
+      if (!hasPermissions && _showETAOutsideApp) {
+        // Revoked permissions -> Turn OFF
+        _showETAOutsideApp = false;
+        await _historyService.setShowETAPreference(false);
+        notifyListeners();
+      } else if (hasPermissions && _isActivatingFeature) {
+        // Just granted during activation flow -> Turn ON
+        _showETAOutsideApp = true;
+        await _historyService.setShowETAPreference(true);
+        _isActivatingFeature = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  void setActivatingFeature(bool activating) {
+    _isActivatingFeature = activating;
+  }
+
+  Future<void> setTutorialShown(bool shown) async {
+    _hasShownNativeTutorial = shown;
+    await _historyService.setTutorialShown(shown);
+    notifyListeners();
+  }
+
+  /// Get the last 4 routes selected by the user
   List<RouteData> get frequentRoutes {
+    if (_allRoutes.isEmpty) return [];
+    return _recentRouteIds
+        .map((id) => _allRoutes.cast<RouteData?>().firstWhere((r) => r?.id == id, orElse: () => null))
+        .whereType<RouteData>()
+        .toList();
+  }
 
-    return _allRoutes.take(2).toList();
+  /// Get routes marked as favorite
+  List<RouteData> get favoriteRoutes {
+    if (_allRoutes.isEmpty) return [];
+    return _allRoutes.where((r) => _favoriteRouteIds.contains(r.id)).toList();
+  }
+
+  /// Check if a route is favorite
+  bool isFavorite(int routeId) => _favoriteRouteIds.contains(routeId);
+
+  /// Toggle favorite status
+  Future<void> toggleFavorite(RouteData route) async {
+    await _historyService.toggleFavorite(route.id);
+    await loadRoutePersistence();
+  }
+
+  /// Load recents and favorites from storage
+  Future<void> loadRoutePersistence() async {
+    _recentRouteIds = await _historyService.getHistory();
+    _favoriteRouteIds = await _historyService.getFavorites();
+    _hasShownNativeTutorial = await _historyService.hasShownTutorial();
+    _showETAOutsideApp = await _historyService.getShowETAPreference();
+    
+    // Sync with actual system permissions
+    await syncBackgroundActivityState();
+    
+    notifyListeners();
   }
 
   /// Get routes that are currently active (En Tiempo)
@@ -48,6 +140,7 @@ class RouteViewModel extends ChangeNotifier {
       
       if (response.respuesta) {
         _allRoutes = response.data;
+        await loadRoutePersistence(); // Load persistence after routes are loaded
         _errorMessage = null;
       } else {
         _errorMessage = 'No se pudieron cargar las rutas';
@@ -67,6 +160,11 @@ class RouteViewModel extends ChangeNotifier {
     await fetchRoutes();
   }
 
+  /// Request location permission explicitly
+  Future<void> requestLocationPermission() async {
+    await _determinePosition();
+  }
+
   /// Get routes for a specific tab
   /// 0: Frecuentes, 1: En Tiempo, 2: Todas
   List<RouteData> getRoutesForTab(int tabIndex) {
@@ -77,6 +175,8 @@ class RouteViewModel extends ChangeNotifier {
         return onTimeRoutes;
       case 2:
         return allRoutes;
+      case 3:
+        return favoriteRoutes;
       default:
         return allRoutes;
     }
@@ -196,11 +296,13 @@ class RouteViewModel extends ChangeNotifier {
   // --- Tracking Logic ---
   
   Timer? _pollingTimer;
+  StreamSubscription<Position>? _backgroundLocationSubscription; // For iOS background persistence
   List<UnitLocation> _units = [];
   final Map<int, List<LatLng>> _unitTrails = {}; // Track history of positions for each unit
   bool _isUnitInRoute = false;
   String _currentDestination = '';
   String _timeUnitUser = '00';
+  RouteData? _currentRoute; 
 
   List<UnitLocation> get units => _units;
   Map<int, List<LatLng>> get unitTrails => _unitTrails;
@@ -212,6 +314,29 @@ class RouteViewModel extends ChangeNotifier {
   void startTracking(RouteData route) {
     // print('🚀 Starting tracking for route: ${route.claveRuta}');
     stopTracking(); // Stop any existing tracking
+
+    _currentRoute = route; // Store current route
+    
+    // Add to history and reload
+    _historyService.addToHistory(route.id).then((_) {
+      loadRoutePersistence();
+    });
+
+    // Start a background location stream for iOS to keep the app alive
+    if (Platform.isIOS) {
+      _backgroundLocationSubscription = Geolocator.getPositionStream(
+        locationSettings: AppleSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+          allowBackgroundLocationUpdates: true,
+          showBackgroundLocationIndicator: false,
+        ),
+      ).listen((Position position) {
+        // We don't need to do anything with the position here,
+        // the existence of the stream with allowBackgroundLocationUpdates: true
+        // is what keeps the app alive on iOS.
+      });
+    }
 
     // Initial fetch
     _fetchUnits(route);
@@ -226,10 +351,19 @@ class RouteViewModel extends ChangeNotifier {
   void stopTracking() {
     _pollingTimer?.cancel();
     _pollingTimer = null;
+    
+    _backgroundLocationSubscription?.cancel();
+    _backgroundLocationSubscription = null;
+
     _units = [];
     _unitTrails.clear();
     _isUnitInRoute = false;
     _currentDestination = '';
+    _currentRoute = null;
+    
+    // Stop native ETA display
+    _etaNativeService.stopETADisplay();
+    
     notifyListeners();
   }
 
@@ -313,6 +447,28 @@ class RouteViewModel extends ChangeNotifier {
         _isUnitInRoute = false;
         _currentDestination = 'Sin unidades asignadas';
         _timeUnitUser = '00';
+      }
+
+      // Start or update native ETA display
+      if (_currentRoute != null && _isUnitInRoute && _showETAOutsideApp) {
+        final etaMinutes = int.tryParse(_timeUnitUser) ?? 0;
+        final tripId = '${_currentRoute!.claveRuta}_${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
+        
+        if (!_etaNativeService.isActive) {
+          // Start native display
+          _etaNativeService.startETADisplay(
+            tripId: tripId,
+            routeName: _currentRoute!.displayName,
+            eta: etaMinutes,
+            status: _currentDestination,
+          );
+        } else {
+          // Update existing display
+          _etaNativeService.updateETA(
+            eta: etaMinutes,
+            status: _currentDestination,
+          );
+        }
       }
 
       notifyListeners();
