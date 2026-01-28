@@ -7,6 +7,7 @@ class RouteHistoryService {
   static const String _favoritesKey = 'route_favorites';
   static const String _tutorialShownKey = 'native_tutorial_shown';
   static const String _showETAKey = 'show_eta_outside_app';
+  static const String _wantsNativeETAKey = 'wants_native_eta';
   static const int _maxHistorySize = 4;
 
   /// Get background activity preference
@@ -26,6 +27,26 @@ class RouteHistoryService {
       await prefs.setBool(_showETAKey, show);
     } catch (e) {
       print('Error saving ETA preference: $e');
+    }
+  }
+
+  /// Get whether user wants to activate native ETA (intent)
+  Future<bool> getWantsNativeETAPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_wantsNativeETAKey) ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Set whether user wants to activate native ETA (intent)
+  Future<void> setWantsNativeETAPreference(bool wants) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_wantsNativeETAKey, wants);
+    } catch (e) {
+      print('Error saving wantsNativeETA preference: $e');
     }
   }
 

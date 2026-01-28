@@ -135,10 +135,23 @@ class ETANativeService {
     await updateETA(eta: eta, status: status);
   }
 
+  /// Request basic permissions at app startup (Location and Notifications)
+  Future<void> requestStartupPermissions() async {
+    if (Platform.isAndroid) {
+       // Request location first as it is fundamental
+       await Permission.location.request();
+       // Then notifications
+       await Permission.notification.request();
+    } else if (Platform.isIOS) {
+       await Permission.location.request();
+       // Notification/Live Activity permissions are handled via Apple's specific APIs 
+       // or via tutorial intent.
+    }
+  }
+
   /// Request System Alert Window permission for Android
   Future<void> requestOverlayPermission() async {
     if (Platform.isAndroid) {
-      await Permission.notification.request();
       await Permission.systemAlertWindow.request();
     }
   }

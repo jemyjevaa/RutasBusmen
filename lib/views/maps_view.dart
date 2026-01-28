@@ -33,6 +33,8 @@ import '../services/panic_button_service.dart'; // For panic button
 import '../services/eta_native_service.dart'; // Added to fix compilation errors
 import 'widgets/NativeDisplayTutorial.dart'; // Added
 
+const Color primaryOrange = Color(0xFFFF6B35);
+
 class MapsView extends StatefulWidget {
   const MapsView({super.key});
 
@@ -70,6 +72,8 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
   BitmapDescriptor? _busIconStopped;
   
   final _panicButtonService = PanicButtonService();
+  
+  final ValueNotifier<bool> _showTutorialOverlayNotifier = ValueNotifier<bool>(false);
 
   Future<void> _loadBusIcon() async {
     _busIconMoving = await BitmapDescriptor.fromAssetImage(
@@ -99,18 +103,30 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
       duration: const Duration(seconds: 2),
     )..repeat();
 
-    _pulseController.addListener(() {
-      setState(() {});
-    });
+    // Optimized: Pulse listener removed from global setState to rescue Android main thread
+    // The pulse effect can be handled via AnimatedBuilder in the marker generation if needed
 
-    // Asegurar que las capturas estén permitidas al entrar al mapa
+    // Consolidate startup logic: Permissions first, then Data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ScreenProtector.preventScreenshotOff();
       
-      // Solicitar permisos de ubicación al inicio (independiente del tutorial)
       final viewModel = context.read<RouteViewModel>();
-      await viewModel.requestLocationPermission();
-      await viewModel.refreshRoutes(); 
+      final etaService = ETANativeService();
+
+      // 1. Request fundamental permissions (Location + Notifications)
+      await etaService.requestStartupPermissions();
+      
+      // 2. Fetch routes and sync state
+      await viewModel.fetchRoutes();
+      await viewModel.syncBackgroundActivityState();
+
+      // 3. Trigger tutorial on STARTUP only for Android (Redistribute load)
+      if (Platform.isAndroid) {
+        bool hasPermissions = await etaService.checkAndroidPermissions();
+        if (!hasPermissions && !viewModel.hasShownNativeTutorial) {
+          _showNativeTutorial();
+        }
+      }
     });
     final mercadoLibre = "mercadolibregdl";
     final mercadoLibre2 = "mercadolibregdl2";
@@ -137,11 +153,6 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     
     ApiConfig.setIdUsuario(user.id);
 
-    // Fetch routes when view loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = context.read<RouteViewModel>();
-      viewModel.fetchRoutes();
-    });
   }
 
   // region information
@@ -436,19 +447,7 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
   }
   
   void _showNativeTutorial() {
-    Navigator.of(context, rootNavigator: true).push(
-      PageRouteBuilder(
-        opaque: false,
-        pageBuilder: (context, _, __) => NativeDisplayTutorial(
-          onComplete: () async {
-            final viewModel = context.read<RouteViewModel>();
-            Navigator.pop(context);
-            await viewModel.setTutorialShown(true);
-            await viewModel.syncBackgroundActivityState();
-          },
-        ),
-      ),
-    );
+    _showTutorialOverlayNotifier.value = true;
   }
   
   Future<void> _onRouteSelected(RouteData route) async {
@@ -464,21 +463,12 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     // Fetch route stops
     _fetchRouteStops(route);
 
-    // Show tutorial for Android/iOS only on the very first time selection if permissions are missing
-    if (Platform.isAndroid || Platform.isIOS) {
-      final ETANativeService _etaService = ETANativeService();
-      bool hasPermissions = true;
-      if (Platform.isAndroid) {
-        hasPermissions = await _etaService.checkAndroidPermissions();
-      } else {
-        // For iOS, we check if tutorial was shown. 
-        // User wants it to show on first time.
-        hasPermissions = false; // Force show on first time if not shown
-      }
-      
-      if (!hasPermissions && !viewModel.hasShownNativeTutorial) {
-        _showNativeTutorial();
-      }
+    // Show tutorial for iOS only upon route selection (first time)
+    if (Platform.isIOS) {
+       final viewModel = context.read<RouteViewModel>();
+       if (!viewModel.hasShownNativeTutorial) {
+         _showNativeTutorial();
+       }
     }
   }
 
@@ -506,15 +496,20 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Sync background activity state when app returns from settings
-      final viewModel = context.read<RouteViewModel>();
-      viewModel.syncBackgroundActivityState();
+      // Safe Delay: Give the OS/UI thread 150ms to settle before syncing state
+      // This prevents the "Freezing" when returning from settings on Android.
+      Future.delayed(const Duration(milliseconds: 150), () async {
+        if (!mounted) return;
+        final viewModel = context.read<RouteViewModel>();
+        await viewModel.syncBackgroundActivityState();
+      });
     }
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _showTutorialOverlayNotifier.dispose();
     super.dispose();
   }
 
@@ -798,8 +793,6 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                            if (Platform.isAndroid) {
                              hasPermissions = await _etaService.checkAndroidPermissions();
                            } else {
-                             // For iOS, we always show tutorial if they haven't seen it 
-                             // and they are turning it ON from the switch.
                              hasPermissions = viewModel.hasShownNativeTutorial;
                            }
                            
@@ -814,24 +807,24 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                       },
                     ),
                     onTap: () async {
-                      bool newValue = !viewModel.showETAOutsideApp;
-                      if (newValue && (Platform.isAndroid || Platform.isIOS)) {
-                        final ETANativeService _etaService = ETANativeService();
-                        bool hasPermissions = true;
-                        if (Platform.isAndroid) {
-                          hasPermissions = await _etaService.checkAndroidPermissions();
-                        } else {
-                          hasPermissions = viewModel.hasShownNativeTutorial;
-                        }
+                       bool newValue = !viewModel.showETAOutsideApp;
+                       if (newValue && (Platform.isAndroid || Platform.isIOS)) {
+                         final ETANativeService _etaService = ETANativeService();
+                         bool hasPermissions = true;
+                         if (Platform.isAndroid) {
+                           hasPermissions = await _etaService.checkAndroidPermissions();
+                         } else {
+                           hasPermissions = viewModel.hasShownNativeTutorial;
+                         }
 
-                        if (!hasPermissions) {
-                          _showNativeTutorial();
-                        } else {
-                          viewModel.toggleShowETAOutsideApp(newValue);
-                        }
-                      } else {
-                        viewModel.toggleShowETAOutsideApp(newValue);
-                      }
+                         if (!hasPermissions) {
+                           _showNativeTutorial();
+                         } else {
+                           viewModel.toggleShowETAOutsideApp(newValue);
+                         }
+                       } else {
+                         viewModel.toggleShowETAOutsideApp(newValue);
+                       }
                     },
                   ),
                   const Padding(
@@ -1124,6 +1117,20 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
               ),
             ),
           ),
+          
+          ValueListenableBuilder<bool>(
+            valueListenable: _showTutorialOverlayNotifier,
+            builder: (context, show, child) {
+              if (!show) return const SizedBox.shrink();
+              return NativeDisplayTutorial(
+                onComplete: () async {
+                  final viewModel = context.read<RouteViewModel>();
+                  _showTutorialOverlayNotifier.value = false;
+                  await viewModel.setTutorialShown(true);
+                },
+              );
+            },
+          ),
         ],
       ),
     ),
@@ -1131,7 +1138,7 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
 },
     );
   }
-  
+
   Future<void> _showUserQRSheet() async {
     final mercadoLibre = "mercadolibregdl";
     final mercadoLibre2 = "mercadolibregdl2";

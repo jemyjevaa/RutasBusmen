@@ -31,6 +31,7 @@ class RouteViewModel extends ChangeNotifier {
   List<int> _favoriteRouteIds = [];
   bool _showETAOutsideApp = false;
   bool _hasShownNativeTutorial = false;
+  bool _wantsNativeETA = false; // Persistent intent to use the feature
   bool _isActivatingFeature = false; // Flag to auto-enable when perms granted
 
   List<RouteData> get allRoutes => _allRoutes;
@@ -38,6 +39,7 @@ class RouteViewModel extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get showETAOutsideApp => _showETAOutsideApp;
   bool get hasShownNativeTutorial => _hasShownNativeTutorial;
+  bool get wantsNativeETA => _wantsNativeETA;
 
   void toggleShowETAOutsideApp(bool value) async {
     if (value && Platform.isAndroid) {
@@ -59,22 +61,46 @@ class RouteViewModel extends ChangeNotifier {
 
   /// Sync the feature state with actual system permissions
   Future<void> syncBackgroundActivityState() async {
+    bool hasPermissions = true;
     if (Platform.isAndroid) {
-      bool hasPermissions = await _etaNativeService.checkAndroidPermissions();
-      
-      if (!hasPermissions && _showETAOutsideApp) {
-        // Revoked permissions -> Turn OFF
-        _showETAOutsideApp = false;
-        await _historyService.setShowETAPreference(false);
-        notifyListeners();
-      } else if (hasPermissions && _isActivatingFeature) {
-        // Just granted during activation flow -> Turn ON
+      hasPermissions = await _etaNativeService.checkAndroidPermissions();
+    }
+    
+    bool stateChanged = false;
+    
+    if (_showETAOutsideApp && !hasPermissions) {
+      // Revoked permissions -> Turn OFF
+      _showETAOutsideApp = false;
+      stateChanged = true;
+    } else if (hasPermissions && (_isActivatingFeature || _wantsNativeETA)) {
+      // Permissions granted and user wants the feature -> Turn ON
+      if (!_showETAOutsideApp) {
         _showETAOutsideApp = true;
         await _historyService.setShowETAPreference(true);
         _isActivatingFeature = false;
-        notifyListeners();
+        stateChanged = true;
       }
     }
+
+    if (stateChanged) {
+      notifyListeners();
+      
+      // If we just turned on the feature and are tracking a route, start it instantly
+      if (_showETAOutsideApp && _currentRoute != null && _isUnitInRoute) {
+        _fetchUnits(_currentRoute!); // Re-trigger fetch to start display
+      }
+    }
+  }
+
+  /// Mark that the user explicitly wants to enable the native ETA feature.
+  /// This is called from the tutorial 'Activate' button.
+  Future<void> markWantsNativeETA(bool wants) async {
+    _wantsNativeETA = wants;
+    await _historyService.setWantsNativeETAPreference(wants);
+    if (wants) {
+      _isActivatingFeature = true; // Temporary flag for this session's auto-enable
+    }
+    notifyListeners();
   }
 
   void setActivatingFeature(bool activating) {
@@ -117,6 +143,7 @@ class RouteViewModel extends ChangeNotifier {
     _favoriteRouteIds = await _historyService.getFavorites();
     _hasShownNativeTutorial = await _historyService.hasShownTutorial();
     _showETAOutsideApp = await _historyService.getShowETAPreference();
+    _wantsNativeETA = await _historyService.getWantsNativeETAPreference();
     
     // Sync with actual system permissions
     await syncBackgroundActivityState();
