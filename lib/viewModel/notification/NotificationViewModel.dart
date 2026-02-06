@@ -18,6 +18,7 @@ class NotificationsViewModel extends ChangeNotifier {
   String? get error => _error;
 
   Future<void> loadNotifications() async {
+
     _isLoading = true;
     notifyListeners();
 
@@ -63,4 +64,21 @@ class NotificationsViewModel extends ChangeNotifier {
     _notifications[index].isRead = true;
     notifyListeners();
   }
+
 }
+
+
+/*
+* whole => entero / completo
+* wise => sabio / prudente
+* there's => hay / hay algo
+* through => a través de / a través
+* something's about to break through => algo se va a romper a través de
+* gonna => voy a
+* get => obtener
+* barely => casi
+* sink => flotar
+* that team can barely sink cour isn't shaing => el equipo puede casi flotar pero no comparte
+* finally => finalmente
+* managed => gestionado
+* */

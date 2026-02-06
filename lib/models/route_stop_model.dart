@@ -24,6 +24,7 @@ class RouteStopModel {
   final int? id;
   final int? orden;
   final String? name;
+  final String? hora_parada;
   final String? description;
   final int? numeroParada;
 
@@ -33,6 +34,7 @@ class RouteStopModel {
     this.id,
     this.orden,
     this.name,
+    this.hora_parada,
     this.description,
     this.numeroParada,
   });
@@ -52,6 +54,7 @@ class RouteStopModel {
       id: json['id'] as int?,
       orden: json['orden'] as int?,
       name: json['nombre'] as String? ?? json['name'] as String?,
+      hora_parada: json['hora_parada'] as String? ?? json['hora_parada'] as String?,
       description: json['descripcion'] as String? ?? json['description'] as String?,
       numeroParada: json['numero_parada'] as int?,
     );

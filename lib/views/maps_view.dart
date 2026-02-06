@@ -245,16 +245,97 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     }
 
     for (var stop in viewModel.routeStops) {
+      print("${stop.name} - ${stop.description}");
+
+      newMarkers.add(
+        Marker(
+          markerId: MarkerId('stop_${stop.id}'),
+          position: LatLng(stop.latitude, stop.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) {
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 🔘 Handle
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+
+                      // 📍 Nombre
+                      _InfoRow(
+                        icon: Icons.location_on_rounded,
+                        iconColor: Colors.blue,
+                        title: "Nombre",
+                        value: stop.name ?? "N-A",
+                      ),
+
+                      const SizedBox(height: 12),
+                      const Divider(),
+
+                      // 📝 Referencia
+                      _InfoRow(
+                        icon: Icons.description_rounded,
+                        iconColor: Colors.orange,
+                        title: "Referencia",
+                        value: stop.description ?? "N-A",
+                      ),
+
+                      const SizedBox(height: 12),
+                      const Divider(),
+
+                      // ⏰ Hora
+                      _InfoRow(
+                        icon: Icons.access_time_rounded,
+                        iconColor: Colors.green,
+                        title: "Hora de llegada aprox.",
+                        value: stop.hora_parada ?? "N-A",
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }
+          ,
+        ),
+      );
+    }
+
+
+    /*for (var stop in viewModel.routeStops) {
+      print("${stop.name}-${stop.description}");
        newMarkers.add(Marker(
           markerId: MarkerId('stop_${stop.id}'),
           position: LatLng(stop.latitude, stop.longitude),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
           infoWindow: InfoWindow(
-            title: stop.name,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(stop.name),
+              ]
+            ),
             snippet: stop.description,
           ),
         ));
-    }
+    }*/
     
     return newMarkers;
   }
@@ -2232,6 +2313,58 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                 ],
               );
             },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String value;
+
+  const _InfoRow({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: iconColor.withOpacity(0.15),
+          child: Icon(icon, color: iconColor),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ],
