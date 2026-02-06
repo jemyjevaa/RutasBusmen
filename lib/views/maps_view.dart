@@ -245,8 +245,6 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     }
 
     for (var stop in viewModel.routeStops) {
-      print("${stop.name} - ${stop.description}");
-
       newMarkers.add(
         Marker(
           markerId: MarkerId('stop_${stop.id}'),
