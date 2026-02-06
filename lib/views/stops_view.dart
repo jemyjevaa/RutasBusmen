@@ -220,7 +220,7 @@ class _StopsViewState extends State<StopsView> {
 
     // Use "description" if available, otherwise fallback or empty
     final String address = stop.description ?? 'Ubicación de parada';
-    final String time_on = stop.hora_parada != null?  "${stop.hora_parada} llegada aprox.":'N-A';
+    final String time_on = stop.hora_parada != null?  "${stop.hora_parada} llegada aprox.":'-';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

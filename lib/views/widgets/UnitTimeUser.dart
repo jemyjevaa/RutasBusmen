@@ -38,10 +38,27 @@ Widget timeUnitToUser(RouteViewModel vm){
           ],
         ),
         Text(
-          "Tiempo estimado de llegada",
+          "Tiempo estimado de llegada de la unidad a tu ubicación",
           style: TextStyle(
             fontSize: 12,
             color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+
+        Text(
+          "Unidad:",
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          vm.nameUnit,
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey,
             fontWeight: FontWeight.w500,
           ),
         ),
