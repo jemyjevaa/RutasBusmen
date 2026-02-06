@@ -220,6 +220,7 @@ class _StopsViewState extends State<StopsView> {
 
     // Use "description" if available, otherwise fallback or empty
     final String address = stop.description ?? 'Ubicación de parada';
+    final String time_on = stop.hora_parada != null?  "${stop.hora_parada} llegada aprox.":'N-A';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,7 +255,7 @@ class _StopsViewState extends State<StopsView> {
             if (!isLast)
               Container(
                 width: 3,
-                height: 80, // Adjustable height based on content
+                height: 140, // Adjustable height based on content
                 color: primaryOrange.withOpacity(0.3),
               ),
           ],
@@ -310,13 +311,47 @@ class _StopsViewState extends State<StopsView> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        address,
+                        "Referencia:",
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey[600],
                         ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                        child: Text(
+                          address,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        )
+                    )
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.timer,
+                      size: 16,
+                      color: Colors.grey[500],
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                        child: Text(
+                          time_on,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        )
+                    )
                   ],
                 ),
               ],

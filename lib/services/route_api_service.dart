@@ -175,7 +175,8 @@ class RouteApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(ApiConfig.getRouteRequestBody()),
       ).timeout(const Duration(seconds: 30));
-
+      print("url => $url");
+      print("params => ${jsonEncode(ApiConfig.getRouteRequestBody())}");
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
         return RouteResponse.fromJson(jsonData);
@@ -199,7 +200,11 @@ class RouteApiService {
           'clave_ruta': claveRuta,
         }),
       ).timeout(const Duration(seconds: 30));
-
+      print("url => $url");
+      print("params => ${jsonEncode({
+        'empresa': ApiConfig.empresa,
+        'clave_ruta': claveRuta,
+      })}");
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
         return RouteStopResponse.fromJson(jsonData);
@@ -230,7 +235,11 @@ class RouteApiService {
       ).timeout(
         const Duration(seconds: 10),
       );
-
+      print("url => $url");
+      print("params => ${jsonEncode({
+        'empresa': ApiConfig.empresa,
+        'clave_ruta': claveRuta,
+      })}");
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
@@ -279,6 +288,11 @@ class RouteApiService {
       ).timeout(
         const Duration(seconds: 30),
       );
+      print("url => $url");
+      print("params => ${jsonEncode({
+        'empresa': ApiConfig.empresa,
+        'clave_ruta': claveRuta,
+        })}");
 
       if (response.statusCode == 200) {
         // print('Route Path Response: ${response.body}'); // DEBUG

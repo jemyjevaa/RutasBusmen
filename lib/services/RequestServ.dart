@@ -36,7 +36,8 @@ class RequestServ {
       String fullUrl = urlFull? urlParam :base + urlParam;
 
       http.Response response;
-      // print("=> $fullUrl");
+      print("fullUrl => $fullUrl");
+      print("params => $params");
       // Agregar parámetros para GET en query string
       if (method.toUpperCase() == 'GET' && params != null && params.isNotEmpty) {
         final uri = Uri.parse(fullUrl).replace(queryParameters: params);
