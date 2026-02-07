@@ -330,7 +330,8 @@ class RouteViewModel extends ChangeNotifier {
   String _currentDestination = '';
   String _nameUnit = '';
   String _timeUnitUser = '00';
-  RouteData? _currentRoute; 
+  RouteData? _currentRoute;
+
 
   List<UnitLocation> get units => _units;
   Map<int, List<LatLng>> get unitTrails => _unitTrails;
@@ -430,6 +431,7 @@ class RouteViewModel extends ChangeNotifier {
            final unit = _units[i];
            // Fetch device details to get positionId
            final deviceData = await _apiService.getDeviceDetails(unit.idplataformagps);
+           print("deviceData => $deviceData");
            if (deviceData != null) {
              final positionId = deviceData['positionId'] as int?;
              if (positionId != null) {
@@ -463,10 +465,14 @@ class RouteViewModel extends ChangeNotifier {
            Position? userPosition = await _determinePosition();
 
            if (userPosition != null) {
+
              int minutes = calculateTimeBetweenUnitToUser(
                unitLat, unitLon,
                userPosition.latitude, userPosition.longitude
              );
+
+             print("calculateTimeBetweenUnitToUser => $unitLat | $unitLon | ${userPosition.latitude} | ${userPosition.longitude} => total ${minutes.toString().padLeft(2, '0')}");
+
              _timeUnitUser = minutes.toString().padLeft(2, '0');
            } else {
              _timeUnitUser = '00';

@@ -7,6 +7,10 @@ import '../models/api_config.dart';
 
 /// Simplified service for handling route API calls
 class RouteApiService {
+
+
+  static const String _apiUser = 'apinstaladores@geovoy.com';
+  static const String _apiPass = 'Instaladores*9';
   
   // Simple method to get units with live positions
   Future<List<UnitLocation>> getUnitsForRoute(String empresa, String claveRuta) async {
@@ -67,12 +71,14 @@ class RouteApiService {
   /// Fetch device details from Traccar API (matches Swift 'devices' call)
   Future<Map<String, dynamic>?> getDeviceDetails(int deviceId) async {
     try {
+      final String basicAuth =
+          'Basic ${base64Encode(utf8.encode('$_apiUser:$_apiPass'))}';
       final url = Uri.parse('https://rastreobusmen.geovoy.com/api/devices?id=$deviceId');
       final response = await http.get(
         url,
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Basic dXN1YXJpb3NhcHA6dXN1YXJpb3MwOTA0', // From Swift logs
+          'Authorization': basicAuth, // From Swift logs
         },
       ).timeout(const Duration(seconds: 10));
 
@@ -90,13 +96,15 @@ class RouteApiService {
 
   /// Fetch position details from Traccar API (matches Swift 'positions' call)
   Future<Map<String, dynamic>?> getDevicePosition(int positionId) async {
+    final String basicAuth =
+        'Basic ${base64Encode(utf8.encode('$_apiUser:$_apiPass'))}';
     try {
       final url = Uri.parse('https://rastreobusmen.geovoy.com/api/positions?id=$positionId');
       final response = await http.get(
         url,
         headers: {
           'Accept': 'application/json',
-          'Authorization': 'Basic dXN1YXJpb3NhcHA6dXN1YXJpb3MwOTA0', // From Swift logs
+          'Authorization': basicAuth, // From Swift logs
         },
       ).timeout(const Duration(seconds: 10));
 
