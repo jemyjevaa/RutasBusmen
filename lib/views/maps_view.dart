@@ -1210,6 +1210,56 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
               );
             },
           ),
+          
+          // Loading Indicator for Route Calculation
+          if (viewModel.isLoadingStops)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(primaryOrange),
+                        strokeWidth: 3,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        "Trazando ruta...",
+                        style: TextStyle(
+                          fontSize: 14, 
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        "Por favor espere",
+                        style: TextStyle(
+                          fontSize: 12, 
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     ),
@@ -1616,6 +1666,7 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
       builder: (BuildContext context) {
         RouteData? selectedRouteDetail;
         String? selectedRouteGroupName;
+        final TextEditingController searchController = TextEditingController();
 
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setSheetState) {
@@ -1742,6 +1793,29 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                             ],
                           ),
                         ),
+                        
+                        // Search Bar (Only for "All" tab)
+                        if (_selectedRouteTab == 2)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: TextField(
+                              controller: searchController,
+                              onChanged: (value) {
+                                setSheetState(() {});
+                              },
+                              decoration: InputDecoration(
+                                hintText: 'Buscar ruta...',
+                                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                            ),
+                          ),
 
                         // Route List
                         Expanded(
@@ -1756,7 +1830,7 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                                 selectedRouteDetail = route;
                               });
                             }
-                          }),
+                          }, searchQuery: searchController.text),
                         ),
                       ],
                     ],
@@ -2011,19 +2085,31 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     );
   }
 
-  Widget _buildRouteList(RouteViewModel viewModel, int tabIndex, Function(dynamic) onItemTap) {
+  // ... (keeping other methods unchanged up to _buildRouteList) ...
+
+  Widget _buildRouteList(RouteViewModel viewModel, int tabIndex, Function(dynamic) onItemTap, {String searchQuery = ''}) {
     if (tabIndex == 2) {
       final routeNames = viewModel.getUniqueRouteNames();
       
-      if (routeNames.isEmpty) {
+      // Filter by search query if present
+      final filteredNames = searchQuery.isEmpty 
+          ? routeNames 
+          : routeNames.where((name) => name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+      
+      if (filteredNames.isEmpty) {
+        if (searchQuery.isNotEmpty) {
+           return Center(
+             child: Text('No se encontraron rutas para "$searchQuery"', style: TextStyle(color: Colors.grey[600])),
+           );
+        }
         return _buildEmptyState();
       }
 
       return ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: routeNames.length,
+        itemCount: filteredNames.length,
         itemBuilder: (context, index) {
-          final name = routeNames[index];
+          final name = filteredNames[index];
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
