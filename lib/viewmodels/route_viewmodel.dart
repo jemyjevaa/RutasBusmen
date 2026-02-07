@@ -328,14 +328,17 @@ class RouteViewModel extends ChangeNotifier {
   final Map<int, List<LatLng>> _unitTrails = {}; // Track history of positions for each unit
   bool _isUnitInRoute = false;
   String _currentDestination = '';
+  String _nameUnit = '';
   String _timeUnitUser = '00';
-  RouteData? _currentRoute; 
+  RouteData? _currentRoute;
+
 
   List<UnitLocation> get units => _units;
   Map<int, List<LatLng>> get unitTrails => _unitTrails;
   bool get isUnitInRoute => _isUnitInRoute;
   String get currentDestination => _currentDestination;
   String get timeUnitUser => _timeUnitUser;
+  String get nameUnit => _nameUnit;
 
   /// Start tracking a route
   void startTracking(RouteData route) {
@@ -386,6 +389,7 @@ class RouteViewModel extends ChangeNotifier {
     _unitTrails.clear();
     _isUnitInRoute = false;
     _currentDestination = '';
+    _nameUnit = '';
     _currentRoute = null;
     
     // Stop native ETA display
@@ -427,6 +431,7 @@ class RouteViewModel extends ChangeNotifier {
            final unit = _units[i];
            // Fetch device details to get positionId
            final deviceData = await _apiService.getDeviceDetails(unit.idplataformagps);
+           print("deviceData => $deviceData");
            if (deviceData != null) {
              final positionId = deviceData['positionId'] as int?;
              if (positionId != null) {
@@ -454,15 +459,20 @@ class RouteViewModel extends ChangeNotifier {
         // Update banner with next stop info
         if (_routeStops.isNotEmpty) {
            _currentDestination = _getNextStopName(_units.first);
+           _nameUnit = _units.first.clave;
            
            // Safe position fetching to prevent crashes on Android
            Position? userPosition = await _determinePosition();
 
            if (userPosition != null) {
+
              int minutes = calculateTimeBetweenUnitToUser(
                unitLat, unitLon,
                userPosition.latitude, userPosition.longitude
              );
+
+             print("calculateTimeBetweenUnitToUser => $unitLat | $unitLon | ${userPosition.latitude} | ${userPosition.longitude} => total ${minutes.toString().padLeft(2, '0')}");
+
              _timeUnitUser = minutes.toString().padLeft(2, '0');
            } else {
              _timeUnitUser = '00';
