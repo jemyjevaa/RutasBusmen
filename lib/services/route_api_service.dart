@@ -9,8 +9,8 @@ import '../models/api_config.dart';
 class RouteApiService {
 
 
-  static const String _apiUser = 'apinstaladores@geovoy.com';
-  static const String _apiPass = 'Instaladores*9';
+  static const String _apiUser = 'desarrollo@geovoy.com'; //'apinstaladores@geovoy.com';
+  static const String _apiPass = 'DesGeo122'; //'Instaladores*9';
   
   // Simple method to get units with live positions
   Future<List<UnitLocation>> getUnitsForRoute(String empresa, String claveRuta) async {
