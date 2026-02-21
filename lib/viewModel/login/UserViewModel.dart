@@ -4,7 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../../services/RequestServ.dart';
 import '../../../services/ResponseServ.dart';
 import '../../../services/UserSession.dart';
-import '../../views/widgets/BuildQrProfileWidget.dart';
+import '../../services/one_signal_service.dart';
 
 class User {
   final String username;
@@ -89,6 +89,11 @@ class LoginViewModel extends ChangeNotifier {
 
       await session.setUserData(response!.usuario.toJson());
       await session.setCompanyData(response.empresa.toJson());
+
+      await OneSignalService().initOneSignal();
+
+      await OneSignalService().setOneSignalTags(response.empresa.clave, response.usuario.id.toString() );
+
       session.textQR = response.empresa.clave;
       session.lastCompanyClave = response.empresa.clave;
       session.nameQR = response.usuario.nombre;

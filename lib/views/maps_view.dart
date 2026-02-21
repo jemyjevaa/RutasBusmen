@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:geovoy_app/services/one_signal_service.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:geovoy_app/services/ResponseServ.dart';
 import 'package:geovoy_app/views/login_screen.dart';
@@ -25,13 +26,11 @@ import '../utils/app_strings.dart';
 import '../viewmodels/route_viewmodel.dart';
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
-import '../models/unit_location_model.dart'; // Added
-import 'package:geolocator/geolocator.dart'; // For distance calculation
+import '../models/unit_location_model.dart';
 import '../models/api_config.dart';
-import '../services/route_api_service.dart'; // For direct API calls
-import '../services/panic_button_service.dart'; // For panic button
-import '../services/eta_native_service.dart'; // Added to fix compilation errors
-import 'widgets/NativeDisplayTutorial.dart'; // Added
+import '../services/panic_button_service.dart';
+import '../services/eta_native_service.dart';
+import 'widgets/NativeDisplayTutorial.dart';
 
 const Color primaryOrange = Color(0xFFFF6B35);
 
@@ -103,13 +102,16 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
       duration: const Duration(seconds: 2),
     )..repeat();
 
+
     // Optimized: Pulse listener removed from global setState to rescue Android main thread
     // The pulse effect can be handled via AnimatedBuilder in the marker generation if needed
 
     // Consolidate startup logic: Permissions first, then Data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       ScreenProtector.preventScreenshotOff();
-      
+
+      // one signal
+
       final viewModel = context.read<RouteViewModel>();
       final etaService = ETANativeService();
 
@@ -922,7 +924,7 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                             context.read<RouteViewModel>().stopTracking();
                           }
                       ApiConfig.clear();
-                      
+                      OneSignalService().removeOneSignalTags();
                       Navigator.pop(context);
                       Navigator.pushReplacement(
                         context,
