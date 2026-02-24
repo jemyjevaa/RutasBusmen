@@ -91,8 +91,8 @@ class LoginViewModel extends ChangeNotifier {
       await session.setCompanyData(response.empresa.toJson());
 
       await OneSignalService().initOneSignal();
-
-      await OneSignalService().setOneSignalTags(response.empresa.clave, response.usuario.id.toString() );
+      // print("clave: ${response.empresa.clave} | usuario.id: ${response.empresa.id.toString()}");
+      await OneSignalService().setOneSignalTags(response.empresa.clave.toString(), response.usuario.id.toString() );
 
       session.textQR = response.empresa.clave;
       session.lastCompanyClave = response.empresa.clave;
