@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:geovoy_app/services/one_signal_service.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:geovoy_app/services/ResponseServ.dart';
 import 'package:geovoy_app/views/login_screen.dart';
@@ -155,6 +156,7 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     
     ApiConfig.setIdUsuario(user.id);
 
+
   }
 
   // region information
@@ -203,7 +205,31 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     final urlTest = "https://rutasbusmen.geovoy.com/api/actividad-usuarios-app";
 
     try{
-      // Logging logic
+
+      var response = await serv.handlingRequestParsed(
+        urlParam: urlTest,
+        params:
+        {
+          "usuarios_cli_id": user.idCli,
+          "nombre": user.nombre,
+          "device_id": deviceId,
+          "app_install_id": appInstallId,
+          "brand": brand,
+          "model": model,
+          "platform": platform,
+          "os_version": osVersion,
+          "app": app,
+          "app_version": appVersion,
+          "id_company": company.id
+        },
+        method: 'POST',
+        asJson: false,
+        fromJson: (json) => json,
+        urlFull: true,
+      );
+
+      print("count user => $response");
+
     }catch(e){
       print("ERROR REG => $e");
     }finally{}

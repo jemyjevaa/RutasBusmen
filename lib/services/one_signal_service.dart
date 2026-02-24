@@ -18,9 +18,9 @@ class OneSignalService {
   }
 
   Future<void> setOneSignalTags(String company, String userId) async {
-    debugPrint('SETTING ONESIGNAL TAGS: empresaNombre=$company, empresasidusuario=$company-$userId');
+    print('SETTING ONESIGNAL TAGS: empresaNombre=$company, empresasidusuario=$company-$userId');
     OneSignal.User.addTagWithKey("empresaNombre", company);
-    // OneSignal.User.addTagWithKey("empresaidusuario", "$company-$userId");
+    // OneSignal.User.addTagWithKey("empresa_id", company);
   }
 
   Future<void> removeOneSignalTags() async {
