@@ -109,9 +109,16 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
 
     // Consolidate startup logic: Permissions first, then Data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      ScreenProtector.preventScreenshotOff();
-
-      // one signal
+      // one signal - Run in background, don't block startup flow
+      OneSignalService().initOneSignal().then((_) async {
+        final company = session.getCompanyData();
+        final user = session.getUserData();
+        if (company != null && user != null) {
+          await OneSignalService().setOneSignalTags(company.clave, user.id.toString());
+        }
+      }).catchError((e) {
+        debugPrint('Error initializing OneSignal in MapsView: $e');
+      });
 
       final viewModel = context.read<RouteViewModel>();
       final etaService = ETANativeService();
@@ -623,7 +630,6 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
   @override
   Widget build(BuildContext context) {
     // Forzar que las capturas estén permitidas en todo el mapa
-    ScreenProtector.preventScreenshotOff();
     Empresa? company = session.getCompanyData();
     Usuario? user = session.getUserData();
 
@@ -970,10 +976,13 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
         children: [
           // Mapa de fondo
           GoogleMap(
+            key: const Key('google_map_main'), // Unique key to help preservation
             mapType: _currentMapType,
             initialCameraPosition: kGooglePlex,
             onMapCreated: (GoogleMapController controller) {
-              _controller.complete(controller);
+              if (!_controller.isCompleted) {
+                _controller.complete(controller);
+              }
             },
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
@@ -1023,6 +1032,17 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                 icon: Icons.qr_code_2,
                 backgroundColor: const Color(0xFF1E293B),
                 onTap: _showUserQRSheet,
+              ),
+            ),
+          
+          // Banner de Unidad Prominente (Parte Superior)
+          if (viewModel.isUnitInRoute && viewModel.nameUnit.isNotEmpty)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _buildUnitBanner(viewModel.nameUnit),
               ),
             ),
           
@@ -1579,6 +1599,50 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
           borderRadius: BorderRadius.circular(12),
         ),
         hoverColor: primaryOrange.withOpacity(0.05),
+      ),
+    );
+  }
+
+  Widget _buildUnitBanner(String unitClave) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30), // Estilo pill más redondeado
+        border: Border.all(
+          color: primaryOrange.withOpacity(0.8),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'UNIDAD',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 2,
+            ),
+          ),
+          Text(
+            unitClave.toUpperCase(),
+            style: const TextStyle(
+              color: primaryOrange,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
       ),
     );
   }
