@@ -1,5 +1,7 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import '../main.dart';
+import '../views/notifications_view.dart';
 
 class OneSignalService {
 
@@ -11,20 +13,33 @@ class OneSignalService {
       OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
       OneSignal.initialize(_one_signal_id);
       await OneSignal.Notifications.requestPermission(true);
-      // _setupOneSignalListeners();
+      _setupOneSignalListeners();
     } catch (e) {
       debugPrint('Error initializing OneSignal: $e');
     }
   }
 
+  void _setupOneSignalListeners() {
+    OneSignal.Notifications.addClickListener((event) {
+      debugPrint('NOTIFICATION CLICK LISTENER CALLED WITH EVENT: ${event.notification.title}');
+      
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => const NotificationsView(),
+        ),
+      );
+    });
+  }
+
   Future<void> setOneSignalTags(String company, String userId) async {
     print('SETTING ONESIGNAL TAGS: empresaNombre=$company, empresasidusuario=$company-$userId');
     OneSignal.User.addTagWithKey("empresaNombre", company);
+    // OneSignal.User.addTagWithKey("empresaidusuario", "$company-$userId");
     // OneSignal.User.addTagWithKey("empresa_id", company);
   }
 
   Future<void> removeOneSignalTags() async {
-    OneSignal.User.removeTags(["empresaNombre", "empresaidusuario"]);
+    OneSignal.User.removeTags(["empresaNombre", "empresaidusuario", "empresa_id"]);
   }
 
 }
