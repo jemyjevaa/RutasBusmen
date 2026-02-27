@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:geovoy_app/services/one_signal_service.dart';
+import 'package:geovoy_app/viewModel/notification/NotificationViewModel.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:screen_protector/screen_protector.dart';
 import 'package:geovoy_app/services/ResponseServ.dart';
@@ -109,6 +110,9 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
 
     // Consolidate startup logic: Permissions first, then Data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+
+
+
       // one signal - Run in background, don't block startup flow
       OneSignalService().initOneSignal().then((_) async {
         final company = session.getCompanyData();
@@ -121,6 +125,12 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
       });
 
       final viewModel = context.read<RouteViewModel>();
+
+      await viewModel.loadNotifications();
+
+      print("notificaions => ${viewModel.totalNotificaciones}");
+
+
       final etaService = ETANativeService();
 
       // 1. Request fundamental permissions (Location + Notifications)
@@ -162,6 +172,8 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     }
     
     ApiConfig.setIdUsuario(user.id);
+
+
 
 
   }
@@ -1007,16 +1019,36 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                   ),
                   
                   // Botón de notificaciones (derecha)
-                  _buildFloatingButton(
-                    icon: Icons.notifications,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationsView(),
-                        ),
-                      );
-                    },
+                  // _buildFloatingButton(
+                  //   icon: Icons.notifications,
+                  //   onTap: () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => const NotificationsView(),
+                  //       ),
+                  //     );
+                  //   },
+                  // ),
+                  Badge(
+                    label: Text('${viewModel.totalNotificaciones}'),
+                    isLabelVisible: viewModel.totalNotificaciones > 0,
+                    backgroundColor: Colors.red,
+                    child: _buildFloatingButton(
+                      icon: Icons.notifications,
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationsView(),
+                          ),
+                        );
+                        // Recargar notificaciones al volver para actualizar el contador
+                        if (context.mounted) {
+                          context.read<RouteViewModel>().loadNotifications();
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),

@@ -132,6 +132,13 @@ class _NotificationsViewState extends State<NotificationsView> {
                     style: TextStyle(color: Color(0xFFFF6B35)),
                   ),
                 ),
+                IconButton(
+                  icon: Icon(Icons.refresh),
+                  onPressed: () {
+                    // Aquí llamas tu función para actualizar datos
+                    vm.loadNotifications();
+                  },
+                )
               ],
             ),
             body: notifications.isEmpty

@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart'; // For distance calculation
 import '../models/route_model.dart';
 import '../models/route_stop_model.dart';
 import '../models/unit_location_model.dart'; // Added
+import '../services/RequestServ.dart';
+import '../services/ResponseServ.dart';
 import '../services/route_api_service.dart';
 import '../services/google_directions_service.dart';
 import '../models/route_path_point.dart';
@@ -25,6 +27,7 @@ class RouteViewModel extends ChangeNotifier {
   List<RouteData> _allRoutes = [];
   bool _isLoading = false;
   String? _errorMessage;
+  int _totalNotifications = 0;
 
   // Persistence state
   List<int> _recentRouteIds = [];
@@ -40,6 +43,7 @@ class RouteViewModel extends ChangeNotifier {
   bool get showETAOutsideApp => _showETAOutsideApp;
   bool get hasShownNativeTutorial => _hasShownNativeTutorial;
   bool get wantsNativeETA => _wantsNativeETA;
+  int get totalNotificaciones => _totalNotifications;
 
   void toggleShowETAOutsideApp(bool value) async {
     if (value && Platform.isAndroid) {
@@ -656,6 +660,37 @@ class RouteViewModel extends ChangeNotifier {
     } catch (e) {
       // Fallback a la última posición conocida si falla el timeout o hay error
       return await Geolocator.getLastKnownPosition();
+    }
+  }
+
+  // Notifications
+  Future<void> loadNotifications() async {
+
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final session = UserSession();
+      Empresa? company = session.getCompanyData();
+      final RequestServ _serv = RequestServ.instance;
+
+      final response = await _serv.handlingRequestParsed<ApiResNotification>(
+        urlParam: RequestServ.urlNotification,
+        params: {'empresa': company!.clave},
+        method: 'POST',
+        asJson: true,
+        fromJson: (json) => ApiResNotification.fromJson(json),
+      );
+
+      // Debes adaptar según estructura real
+      final List<NotificationItem> items = response?.data ?? [];
+
+      _totalNotifications = items.length;
+
+    } catch (e) {
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 

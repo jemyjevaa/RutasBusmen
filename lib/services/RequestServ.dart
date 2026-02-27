@@ -16,6 +16,7 @@ class RequestServ {
 
   // Singleton pattern
   RequestServ._privateConstructor();
+
   static final RequestServ instance = RequestServ._privateConstructor();
 
   Future<String?> handlingRequest({

@@ -20,6 +20,7 @@ class NotificationsViewModel extends ChangeNotifier {
   Future<void> loadNotifications() async {
 
     _isLoading = true;
+    _notifications = [];
     notifyListeners();
 
     try {
