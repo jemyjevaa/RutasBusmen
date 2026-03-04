@@ -21,7 +21,8 @@ struct BusETAAttributes: ActivityAttributes {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GMSServices.provideAPIKey("AIzaSyA6WSHJ8R0AMDhhk0e_-Sn0KLEwSB60QKw")
+    // GMSServices.provideAPIKey("AIzaSyA6WSHJ8R0AMDhhk0e_-Sn0KLEwSB60QKw")
+    GMSServices.provideAPIKey("AIzaSyAN0dgjS6e10dwwU1V3lPI4islZvggvq1E")
     GeneratedPluginRegistrant.register(with: self)
     
     // Setup MethodChannel for Live Activities
