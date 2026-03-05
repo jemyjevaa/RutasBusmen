@@ -80,7 +80,7 @@ class LoginViewModel extends ChangeNotifier {
     try{
       ApiResLogin? response = await serv.handlingRequestParsed<ApiResLogin>(
         urlParam: RequestServ.urlvalidaUsuarioEmpresa,
-        params: {'correo': userParam, 'contraseña': pwdParam},
+        params: {'user': userParam, 'password': pwdParam},
         method: 'POST',
         asJson: true,
         fromJson: (json) => ApiResLogin.fromJson(json),

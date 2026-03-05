@@ -5,7 +5,8 @@ class RequestServ {
   // static const String baseUrlAdm = "";
   static const String baseUrlNor = "https://rutasbusmen.geovoy.com/";
 
-  static const String urlvalidaUsuarioEmpresa = "api/validaUsuarioEmpresa";
+  // static const String urlvalidaUsuarioEmpresa = "api/validaUsuarioEmpresa";
+  static const String urlvalidaUsuarioEmpresa = "api/session/app";
 
   static const String urlNotification = "api/notificacionporempresa";
 
@@ -37,8 +38,8 @@ class RequestServ {
       String fullUrl = urlFull? urlParam :base + urlParam;
 
       http.Response response;
-      print("fullUrl => $fullUrl");
-      print("params => $params");
+      print("[ POST ] fullUrl => $fullUrl");
+      print("[ POST ] params => $params");
       // Agregar parámetros para GET en query string
       if (method.toUpperCase() == 'GET' && params != null && params.isNotEmpty) {
         final uri = Uri.parse(fullUrl).replace(queryParameters: params);
