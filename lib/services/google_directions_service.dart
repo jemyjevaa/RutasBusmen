@@ -4,8 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/route_stop_model.dart';
 
 class GoogleDirectionsService {
-  // Using the key found in AndroidManifest.xml
-  static const String _apiKey = 'AIzaSyA6WSHJ8R0AMDhhk0e_-Sn0KLEwSB60QKw';
+
+  static const String _apiKey = 'AIzaSyAN0dgjS6e10dwwU1V3lPI4islZvggvq1E';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/directions/json';
 
   Future<List<LatLng>> getRoutePolyline(List<RouteStopModel> stops) async {
