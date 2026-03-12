@@ -5,6 +5,8 @@ import '../../../services/RequestServ.dart';
 import '../../../services/ResponseServ.dart';
 import '../../../services/UserSession.dart';
 import '../../services/one_signal_service.dart';
+import '../../../services/BusinessFeaturesService.dart';
+import '../../views/widgets/UnifiedCodeDisplay.dart';
 
 class User {
   final String username;
@@ -98,6 +100,10 @@ class LoginViewModel extends ChangeNotifier {
       session.lastCompanyClave = response.empresa.clave;
       session.nameQR = response.usuario.nombre;
       session.qrTimestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      // Fetch and set feature level
+      final featureLevel = await BusinessFeaturesService.getBusinessFeatures(response.empresa.clave);
+      session.featureLevel = featureLevel;
 
       // print("empresa => ${response.empresa.toJson()}");
       // print("getCompanyData => ${session.getCompanyData()}");
@@ -127,15 +133,10 @@ class LoginViewModel extends ChangeNotifier {
     return Center(
       child: Column(
         children: [
-          Text("Nombre: ${UserSession().nameQR}"),
-          const SizedBox(height: 6),
-          Center(
-            child: QrImageView(
-              data: data,
-              version: QrVersions.auto,
-              size: 240,
-            ),
-          )
+          UnifiedCodeDisplay(
+            data: data,
+            label: "Nombre: ${UserSession().nameQR}",
+          ),
         ],
       ),
     );

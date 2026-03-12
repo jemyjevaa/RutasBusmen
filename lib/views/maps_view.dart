@@ -33,6 +33,9 @@ import '../models/api_config.dart';
 import '../services/panic_button_service.dart';
 import '../services/eta_native_service.dart';
 import 'widgets/NativeDisplayTutorial.dart';
+import 'widgets/UnifiedCodeDisplay.dart';
+import '../services/BusinessFeaturesService.dart';
+
 
 const Color primaryOrange = Color(0xFFFF6B35);
 
@@ -127,6 +130,15 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
       final viewModel = context.read<RouteViewModel>();
 
       await viewModel.loadNotifications();
+      
+      // Refresh business features on startup
+      final companyData = session.getCompanyData();
+      if (companyData != null) {
+        BusinessFeaturesService.getBusinessFeatures(companyData.clave).then((level) {
+          session.featureLevel = level;
+          if (mounted) setState(() {});
+        });
+      }
 
       print("notificaions => ${viewModel.totalNotificaciones}");
 
@@ -155,14 +167,17 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     final company = session.getCompanyData()!;
     final user = session.getUserData()!;
 
-    if( company.clave == mercadoLibre || company.clave == mercadoLibre2 ){
-      UserSession().textQR = user.idCli.toString();
-      UserSession().nameQR = user.nombre;
-      UserSession().lastCompanyClave = company.clave;
-    }else{
-      UserSession().textQR = null;
-      UserSession().nameQR = "";
-      UserSession().lastCompanyClave = null;
+    // Configure QR/Barcode data if not already set or for specific companies
+    if (UserSession().textQR == null || UserSession().textQR!.isEmpty) {
+      if (company.clave == mercadoLibre || company.clave == mercadoLibre2) {
+        UserSession().textQR = user.idCli.toString();
+        UserSession().nameQR = user.nombre;
+        UserSession().lastCompanyClave = company.clave;
+      } else {
+        UserSession().textQR = company.clave;
+        UserSession().nameQR = user.nombre;
+        UserSession().lastCompanyClave = company.clave;
+      }
     }
 
     logDeviceInfo();
@@ -227,8 +242,8 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
 
       var response = await serv.handlingRequestParsed(
         urlParam: urlTest,
-        params:
-        {
+        urlFull: true,
+        params: {
           "usuarios_cli_id": user.idCli,
           "nombre": user.nombre,
           "device_id": deviceId,
@@ -239,12 +254,9 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
           "os_version": osVersion,
           "app": app,
           "app_version": appVersion,
-          "id_company": company.id
         },
         method: 'POST',
-        asJson: false,
         fromJson: (json) => json,
-        urlFull: true,
       );
 
       print("count user => $response");
@@ -1055,13 +1067,13 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
             ),
           ),
           
-          // Botón de Pase de Acceso rápido (Solo Mercado Libre)
-          if (isMercadoLibre)
+          // Botón de Pase de Acceso rápido (Debajo del menú)
+          if (UserSession().textQR != null && UserSession().textQR!.isNotEmpty && UserSession().featureLevel != 1)
             Positioned(
               left: 16,
               top: MediaQuery.of(context).padding.top + 80, // Debajo del botón de menú
               child: _buildFloatingButton(
-                icon: Icons.qr_code_2,
+                icon: Icons.qr_code_scanner_rounded,
                 backgroundColor: const Color(0xFF1E293B),
                 onTap: _showUserQRSheet,
               ),
@@ -1348,23 +1360,51 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
     );
   }
 
+  Widget _buildFloatingButton({required IconData icon, required VoidCallback onTap, Color? backgroundColor}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: backgroundColor ?? primaryOrange,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(
+            icon,
+            size: 28,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+  
+
   Future<void> _showUserQRSheet() async {
+    final session = UserSession();
+    if (session.featureLevel == 1) return;
+    
     final mercadoLibre = "mercadolibregdl";
-    final mercadoLibre2 = "mercadolibregdl2";
     final companyClave = session.getCompanyData()?.clave ?? session.lastCompanyClave;
-    final isMercadoLibre = companyClave == mercadoLibre || companyClave == mercadoLibre2;
+    final isMercadoLibre = companyClave == "mercadolibregdl" || companyClave == "mercadolibregdl2";
 
-    String userName = UserSession().nameQR ?? 'Usuario';
-    String userId = UserSession().textQR ?? '';
+    String userName = UserSession().nameQR;
+    String userId = UserSession().textQR!;
 
-    // Solo activar protección si es Mercado Libre
     if (isMercadoLibre) {
       await ScreenProtector.preventScreenshotOn();
     } else {
       await ScreenProtector.preventScreenshotOff();
     }
-
-    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -1405,7 +1445,6 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -1434,66 +1473,19 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xFF1E293B).withOpacity(0.05),
-                              ),
-                              child: const Icon(Icons.person, size: 48, color: Color(0xFF1E293B)),
-                            ),
-                            const SizedBox(height: 16),
                             Text(
                               userName,
-                              textAlign: TextAlign.center,
                               style: const TextStyle(
-                                fontSize: 20,
+                                fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF0F172A),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'PERSONAL AUTORIZADO',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF64748B),
-                                  letterSpacing: 1,
-                                ),
-                              ),
+                            const SizedBox(height: 16),
+                            UnifiedCodeDisplay(
+                              data: userId,
                             ),
-                            const SizedBox(height: 24),
-                            const Divider(height: 1),
-                            const SizedBox(height: 24),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: QrImageView(
-                                data: userId,
-                                version: QrVersions.auto,
-                                size: 160,
-                                backgroundColor: Colors.white,
-                                eyeStyle: const QrEyeStyle(
-                                  eyeShape: QrEyeShape.square,
-                                  color: Colors.black,
-                                ),
-                                dataModuleStyle: const QrDataModuleStyle(
-                                  dataModuleShape: QrDataModuleShape.square,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 16),
                             Text(
                               userId,
                               style: const TextStyle(
@@ -1526,60 +1518,16 @@ class _MapsViewState extends State<MapsView> with WidgetsBindingObserver, Ticker
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.nfc, size: 16, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Acerca al lector para registrar entrada',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
         ),
       ),
-    ).then((_) async {
-      // Siempre desactivar al cerrar por seguridad
-      await ScreenProtector.preventScreenshotOff();
+    ).then((_) {
+      ScreenProtector.preventScreenshotOff();
     });
   }
 
-  Widget _buildFloatingButton({required IconData icon, required VoidCallback onTap, Color? backgroundColor}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          color: backgroundColor ?? primaryOrange,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Icon(
-            icon,
-            size: 28,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-  
   Widget _buildDrawerItem({
     required IconData icon,
     required String title,

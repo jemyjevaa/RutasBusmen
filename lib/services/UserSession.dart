@@ -22,6 +22,9 @@ class UserSession {
   bool get isLogin => _prefs?.getBool('isLogin') ?? false;
   set isLogin(bool value) => _prefs?.setBool('isLogin', value);
 
+  int get featureLevel => _prefs?.getInt('featureLevel') ?? 1;
+  set featureLevel(int value) => _prefs?.setInt('featureLevel', value);
+
   // region persist data user
 
   bool get isPersist => _prefs?.getBool('isPersist') ?? false;

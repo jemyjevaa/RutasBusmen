@@ -7,6 +7,7 @@ import '../services/UserSession.dart';
 import '../viewModel/login/UserViewModel.dart';
 import 'maps_view.dart';
 import '../utils/app_strings.dart';
+import 'widgets/UnifiedCodeDisplay.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -314,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      qrMercadoLibreButton(
+                                      qrPaseButton(
                                         context: context,
                                         viewModel: vm,
                                       ),
@@ -526,11 +527,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget qrMercadoLibreButton({
+  Widget qrPaseButton({
     required BuildContext context,
     required LoginViewModel viewModel,
   }) {
-    if (UserSession().textQR == null || UserSession().textQR!.isEmpty) {
+    if (UserSession().textQR == null || UserSession().textQR!.isEmpty || UserSession().featureLevel == 1) {
       return const SizedBox.shrink();
     }
 
@@ -570,14 +571,7 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.white,
             ),
             const SizedBox(width: 6),
-            Text(
-              'QR',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            
           ],
         ),
       ),
@@ -705,26 +699,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 24),
                             const Divider(height: 1),
                             const SizedBox(height: 24),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: QrImageView(
-                                data: userId,
-                                version: QrVersions.auto,
-                                size: 160,
-                                backgroundColor: Colors.white,
-                                eyeStyle: const QrEyeStyle(
-                                  eyeShape: QrEyeShape.square,
-                                  color: Colors.black,
-                                ),
-                                dataModuleStyle: const QrDataModuleStyle(
-                                  dataModuleShape: QrDataModuleShape.square,
-                                  color: Colors.black,
-                                ),
-                              ),
+                            UnifiedCodeDisplay(
+                              data: userId,
                             ),
                             const SizedBox(height: 8),
                             Text(
