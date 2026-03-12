@@ -38,16 +38,19 @@ class RequestServ {
       String fullUrl = urlFull? urlParam :base + urlParam;
 
       http.Response response;
-      print("[ POST ] fullUrl => $fullUrl");
-      print("[ POST ] params => $params");
+      Map<String, String>? headers;
+      print("[ $method ] fullUrl => $fullUrl");
+      print("[ $method ] params => $params");
       // Agregar parámetros para GET en query string
-      if (method.toUpperCase() == 'GET' && params != null && params.isNotEmpty) {
-        final uri = Uri.parse(fullUrl).replace(queryParameters: params);
-        response = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (method.toUpperCase() == 'GET') {
+        Uri uri = Uri.parse(fullUrl);
+        if (params != null && params.isNotEmpty) {
+          uri = uri.replace(queryParameters: params.map((k, v) => MapEntry(k, v.toString())));
+        }
+        response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 10));
       } else {
         // Construir el body según asJson o form-url-encoded
         dynamic body;
-        Map<String, String>? headers;
 
         if (params != null) {
           if (asJson) {
