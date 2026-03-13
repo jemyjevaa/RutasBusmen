@@ -25,7 +25,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -47,13 +47,17 @@ android {
             storePassword = keystoreProperties.getProperty("storePassword")
         }
     }
+
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now,
-            // so `flutter run --release` works.
-//            signingConfig = signingConfigs.getByName("debug")
-             signingConfig = signingConfigs.getByName("release")
+        getByName("release") {
+            // Fix: Use '=' for assignment and 'is' prefix for Kotlin DSL properties
+            isMinifyEnabled = true
+            isShrinkResources = true
+            
+            // Fix: Use double quotes for strings and parentheses for function calls
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

@@ -5,7 +5,8 @@ import '../models/route_stop_model.dart';
 
 class GoogleDirectionsService {
 
-  static const String _apiKey = 'AIzaSyAN0dgjS6e10dwwU1V3lPI4islZvggvq1E';
+  // static const String _apiKey = 'AIzaSyAN0dgjS6e10dwwU1V3lPI4islZvggvq1E';
+  static const String _apiKey = 'AIzaSyCi0jTxYW3AhPM7QqZhoJWCn5RVKr0Qvu4';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/directions/json';
 
   Future<List<LatLng>> getRoutePolyline(List<RouteStopModel> stops) async {
