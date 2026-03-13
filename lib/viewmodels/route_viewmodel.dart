@@ -594,7 +594,9 @@ class RouteViewModel extends ChangeNotifier {
     // Average speed 30 km/h = 8.33 m/s
     double averageSpeedMps = 8.33;
     double timeInSeconds = distanceInMeters / averageSpeedMps;
-    return (timeInSeconds / 60).round();
+    double totalTime = timeInSeconds / 60;
+    print("timeUnitUser => $totalTime");
+    return (totalTime * 2.3).round();
   }
 
   /// Calculate next stop for the unit
