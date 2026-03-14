@@ -52,12 +52,6 @@ class GoogleDirectionsService {
              segment.removeAt(0);
            }
            fullPolyline.addAll(segment);
-        } else {
-             // Fallback for failed segment: straight line
-             // We need to re-derive which pair this was... bit messy logic above for fallback
-             // actually segmentResults contains the points.
-             // If we really want fallback, _fetchPair should return the fallback line on error?
-             // Let's modify _fetchPair to return fallback instead of empty list on error.
         }
     }
     

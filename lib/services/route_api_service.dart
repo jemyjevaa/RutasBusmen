@@ -74,6 +74,7 @@ class RouteApiService {
       final String basicAuth =
           'Basic ${base64Encode(utf8.encode('$_apiUser:$_apiPass'))}';
       final url = Uri.parse('https://rastreobusmen.geovoy.com/api/devices?id=$deviceId');
+      // final url = Uri.parse('https://rastreobusmen.geovoy.com/api/devices');
       final response = await http.get(
         url,
         headers: {
@@ -81,7 +82,7 @@ class RouteApiService {
           'Authorization': basicAuth, // From Swift logs
         },
       ).timeout(const Duration(seconds: 10));
-
+      print("response $deviceId => ${response.body}");
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
         if (data.isNotEmpty) {

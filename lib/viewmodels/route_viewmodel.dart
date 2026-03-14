@@ -1,4 +1,5 @@
 import 'dart:async'; // For Timer
+import 'dart:convert';
 import 'dart:math'; // For cos, sin
 import 'dart:io'; // For Platform check
 import 'package:flutter/foundation.dart';
@@ -428,14 +429,12 @@ class RouteViewModel extends ChangeNotifier {
 
 
       if (units.isNotEmpty) {
-        _isUnitInRoute = true;
-
         // Enrich unit data with real-time position from Traccar
         for (var i = 0; i < _units.length; i++) {
            final unit = _units[i];
            // Fetch device details to get positionId
            final deviceData = await _apiService.getDeviceDetails(unit.idplataformagps);
-           print("deviceData => $deviceData");
+           
            if (deviceData != null) {
              final positionId = deviceData['positionId'] as int?;
              if (positionId != null) {
@@ -443,46 +442,64 @@ class RouteViewModel extends ChangeNotifier {
                final positionData = await _apiService.getDevicePosition(positionId);
                if (positionData != null) {
                  // Update unit with real-time data
-                 unitLat = positionData['latitude'] as double? ?? unit.latitude;
-                 unitLon = positionData['longitude'] as double? ?? unit.longitude;
-                 print("unitLat => $unitLat | unitLon => $unitLon");
-                 // Update trail history
-                 _updateUnitTrail(unit.id, unitLat, unitLon);
+                 double lat = positionData['latitude'] as double? ?? unit.latitude;
+                 double lon = positionData['longitude'] as double? ?? unit.longitude;
+                 
+                 // Solo actualizar y mantener si la posición es válida (no 0,0)
+                 if (lat != 0.0 && lon != 0.0) {
+                    _updateUnitTrail(unit.id, lat, lon);
 
-                 _units[i] = unit.copyWith(
-                   latitude: unitLat,
-                   longitude: unitLon,
-                   speed: (positionData['speed'] as num?)?.toDouble() ?? 0.0,
-                   course: (positionData['course'] as num?)?.toDouble() ?? 0.0,
-                 );
+                    _units[i] = unit.copyWith(
+                      latitude: lat,
+                      longitude: lon,
+                      speed: (positionData['speed'] as num?)?.toDouble() ?? 0.0,
+                      course: (positionData['course'] as num?)?.toDouble() ?? 0.0,
+                    );
+                 } else {
+                    // Marcamos con 0,0 para filtrar después
+                    _units[i] = unit.copyWith(latitude: 0.0, longitude: 0.0);
+                 }
                }
              }
            }
         }
 
+        // Filtrar unidades que no tienen ubicación válida para que no se muestren en el mapa
+        _units = _units.where((u) => u.latitude != 0.0 && u.longitude != 0.0).toList();
+        _isUnitInRoute = _units.isNotEmpty;
+
         // Update banner with next stop info
-        if (_routeStops.isNotEmpty) {
-           _currentDestination = _getNextStopName(_units.first);
-           _nameUnit = _units.first.clave;
-           
-           // Safe position fetching to prevent crashes on Android
-           Position? userPosition = await _determinePosition();
+        if (_isUnitInRoute) {
+           // Usamos la primera unidad válida para la información del banner
+           unitLat = _units.first.latitude;
+           unitLon = _units.first.longitude;
 
-           if (userPosition != null) {
+           if (_routeStops.isNotEmpty) {
+             _currentDestination = _getNextStopName(_units.first);
+             _nameUnit = _units.first.clave;
+             
+             // Safe position fetching to prevent crashes on Android
+             Position? userPosition = await _determinePosition();
 
-             int minutes = calculateTimeBetweenUnitToUser(
-               unitLat, unitLon,
-               userPosition.latitude, userPosition.longitude
-             );
+             if (userPosition != null) {
 
-             print("calculateTimeBetweenUnitToUser => $unitLat | $unitLon | ${userPosition.latitude} | ${userPosition.longitude} => total ${minutes.toString().padLeft(2, '0')}");
+               int minutes = calculateTimeBetweenUnitToUser(
+                 unitLat, unitLon,
+                 userPosition.latitude, userPosition.longitude
+               );
 
-             _timeUnitUser = minutes.toString().padLeft(2, '0');
+               print("calculateTimeBetweenUnitToUser => $unitLat | $unitLon | ${userPosition.latitude} | ${userPosition.longitude} => total ${minutes.toString().padLeft(2, '0')}");
+
+               _timeUnitUser = minutes.toString().padLeft(2, '0');
+             } else {
+               _timeUnitUser = '00';
+             }
            } else {
-             _timeUnitUser = '00';
+             _currentDestination = route.displayName;
            }
         } else {
            _currentDestination = route.displayName;
+           _timeUnitUser = '00';
         }
       } else {
         _isUnitInRoute = false;
@@ -694,11 +711,5 @@ class RouteViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  @override
-  void dispose() {
-    _pollingTimer?.cancel();
-    super.dispose();
   }
 }
